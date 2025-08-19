@@ -1,0 +1,38 @@
+{
+  // Worker configuration
+  "name": "battleship-sync-worker",
+  "main": "../src/sync-worker.ts",
+  "compatibility_date": "2025-05-08",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Secrets configuration
+  "secrets_store_secrets": [],
+
+  // KV namespaces
+  "kv_namespaces": [],
+
+  // Environment variables
+  "vars": {
+    "LIVESTORE_CF_SYNC_DATABASE_ID": "9b7a07d6-88d6-4663-9dae-a3b1de63450c",
+  },
+
+  // Durable Objects
+  "durable_objects": {
+    "bindings": [],
+  },
+
+  // Migrations
+  "migrations": [],
+
+  // D1 Databases
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "battleship",
+      "database_id": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}
