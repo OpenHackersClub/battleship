@@ -1,8 +1,9 @@
 import { SnapModifier } from '@dnd-kit/abstract/modifiers';
-import { RestrictToWindow } from '@dnd-kit/dom/modifiers';
-import { DragDropProvider, useDraggable } from '@dnd-kit/react';
+import { RestrictToElement } from '@dnd-kit/dom/modifiers';
+import { type DragDropEvents, DragDropProvider, useDraggable } from '@dnd-kit/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { isShipColliding, useShips } from './GameStateProvider';
+import { isShipColliding } from '@/lib/domain/collision';
+import { useShips } from './GameStateProvider';
 
 const Grid = React.forwardRef<
   HTMLDivElement,
@@ -35,13 +36,6 @@ interface DragDropModifier {
   [key: string]: unknown;
 }
 
-interface DragEndEvent {
-  operation: {
-    source: { id: string };
-    transform: { x: number; y: number };
-  };
-}
-
 // Draggable component
 const Draggable: React.FC<{
   id: string;
@@ -69,6 +63,8 @@ const Draggable: React.FC<{
     </div>
   );
 };
+
+type DragEndEvent = Parameters<DragDropEvents['dragend']>[0];
 
 export const SeaGrid: React.FC = () => {
   const [rowSize, _setRowSize] = useState(10);
@@ -110,7 +106,9 @@ export const SeaGrid: React.FC = () => {
     <div className="p-5">
       <DragDropProvider
         onDragEnd={(event: DragEndEvent) => {
-          const draggedId = event.operation.source.id;
+          const draggedId = event.operation?.source?.id;
+          if (!draggedId) return;
+
           setShips((prevShips) => {
             const draggedShip = prevShips.find((ship) => ship.id === draggedId);
             if (!draggedShip) return prevShips;
@@ -125,24 +123,22 @@ export const SeaGrid: React.FC = () => {
               draggedShip.y + event.operation.transform.y / (pixelPerCellY || 1)
             );
 
-            const occupiedCols = draggedShip.orientation === 0 ? draggedShip.length : 1;
-            const occupiedRows = draggedShip.orientation === 90 ? draggedShip.length : 1;
-            const maxX = Math.max(0, colSize - occupiedCols);
-            const maxY = Math.max(0, rowSize - occupiedRows);
+            // dnd already handle snap to grid, we do simple coordinate based collision dtection
 
-            const boundedX = Math.max(0, Math.min(maxX, proposedX));
-            const boundedY = Math.max(0, Math.min(maxY, proposedY));
+            const proposedShip = {
+              ...draggedShip,
+              x: proposedX,
+              y: proposedY,
+            };
 
-            // Check for collision at the proposed position
-            if (isShipColliding(draggedShip, boundedX, boundedY, prevShips)) {
+            // // Check for collision at the proposed position
+            if (isShipColliding(proposedShip, prevShips)) {
               // If collision detected, keep the ship at its original position
               return prevShips;
             }
 
             // No collision, update the position
-            return prevShips.map((ship) =>
-              ship.id === draggedId ? { ...ship, x: boundedX, y: boundedY } : ship
-            );
+            return prevShips.map((ship) => (ship.id === draggedId ? proposedShip : ship));
           });
         }}
       >
@@ -160,7 +156,9 @@ export const SeaGrid: React.FC = () => {
                       y: cellPixelSize.height + cellPixelSize.gapY || 1,
                     },
                   }),
-                  RestrictToWindow,
+                  RestrictToElement.configure({
+                    element: gridRef.current,
+                  }),
                 ]}
                 style={{
                   left: `${ship.x * (cellPixelSize.width + cellPixelSize.gapX)}px`,

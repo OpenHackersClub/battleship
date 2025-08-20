@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { uiState$ } from '../livestore/queries.js';
 import { events, tables } from '../livestore/schema.js';
 import { SeaGrid } from './SeaGrid.js';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 
 const allShips$ = queryDb(tables.allShips.select(), { label: 'allShips' });
@@ -150,9 +151,25 @@ const _BattleshipGrid: React.FC<GridProps> = ({
           );
         })}
 
-        {console.log('BattleshipGrid rendering blocks:', blocks, 'size:', size) ||
-          blocks.map((block) => <DraggableBlock key={block.id} block={block} />)}
+        {blocks.map((block) => (
+          <DraggableBlock key={block.id} block={block} gridSize={size} />
+        ))}
       </div>
+    </div>
+  );
+};
+
+export const PlayerTitle = ({ playerName }: { playerName: string }) => {
+  return (
+    <div className="mt-4 flex justify-center items-center gap-3 ">
+      <Avatar>
+        <AvatarImage
+          src={`https://api.dicebear.com/8.x/identicon/svg?seed=${playerName}`}
+          alt={playerName}
+        />
+        <AvatarFallback>{playerName.slice(0, 2)}</AvatarFallback>
+      </Avatar>
+      <div className="text-sm font-medium">{playerName}</div>
     </div>
   );
 };
@@ -271,10 +288,12 @@ export const MainSection: React.FC = () => {
       <div className="flex gap-8 justify-center items-start p-8 w-full max-w-6xl mx-auto">
         <div className="flex-1">
           <SeaGrid />
+          <PlayerTitle playerName="Player 1 (You)" />
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1">
           <SeaGrid />
+          <PlayerTitle playerName="Player 2" />
         </div>
       </div>
     </section>

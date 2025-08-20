@@ -33,11 +33,13 @@
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
     "shadcn": "^2.10.0",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.8.3",
-    "vite": "^6.3.4"
+    "vite": "^6.3.4",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=23.0.0"
@@ -48,6 +50,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "biome check",
-    "lint:fix": "biome check --fix"
+    "lint:fix": "biome check --fix",
+    "test": "vitest"
   }
 }
