@@ -2,7 +2,7 @@ import { SnapModifier } from '@dnd-kit/abstract/modifiers';
 import { RestrictToElement } from '@dnd-kit/dom/modifiers';
 import { type DragDropEvents, DragDropProvider, useDraggable } from '@dnd-kit/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { isShipColliding } from '@/lib/domain/collision';
+import { isColliding } from '@/lib/domain/collision';
 import { useShips } from './GameStateProvider';
 
 const Grid = React.forwardRef<
@@ -132,7 +132,7 @@ export const SeaGrid: React.FC = () => {
             };
 
             // // Check for collision at the proposed position
-            if (isShipColliding(proposedShip, prevShips)) {
+            if (isColliding(proposedShip, prevShips)) {
               // If collision detected, keep the ship at its original position
               return prevShips;
             }

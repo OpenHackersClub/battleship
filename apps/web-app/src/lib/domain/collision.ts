@@ -1,34 +1,30 @@
-import type { Ship } from '@/components/Ship';
+import { getPositions, type SeaObject } from '@/lib/domain/SeaObject';
 
 // we simplify to find any overlapping coordinate and don't use the @dnd-kit/collision which is drag operation & view position based
-
 /**
  *
  * Unencrypted variant
  *
- * @param thisShip
- * @param allShips
+ * @param thisPositions
+ * @param allPositions
  * @returns
  */
 
-export const isShipColliding = (thisShip: Ship, allShips: Ship[]) => {
-  const thisKeys = new Set(getShipPositions(thisShip).map(encodeCoordinates));
+export const isColliding = (thisSeaObject: SeaObject, allSeaObjects: SeaObject[]) => {
+  const thisPositions = getPositions(thisSeaObject);
+  const thisKeys = new Set(thisPositions.map(encodeCoordinates));
 
   const otherKeys = new Set(
-    allShips
-      .filter((ship) => ship.id !== thisShip.id)
-      .flatMap(getShipPositions)
+    allSeaObjects
+      .filter((seaObject) => thisSeaObject.id !== seaObject.id)
+      .flatMap(getPositions)
       .map(encodeCoordinates)
   );
 
-  return [...thisKeys].some((key) => otherKeys.has(key));
-};
+  const idx = [...thisKeys].findIndex((key) => otherKeys.has(key));
 
-// Helper function to get all grid positions occupied by a ship
-const getShipPositions = (ship: Ship): Array<{ x: number; y: number }> =>
-  Array.from({ length: ship.length }, (_, i) =>
-    ship.orientation === 0 ? { x: ship.x + i, y: ship.y } : { x: ship.x, y: ship.y + i }
-  );
+  return thisPositions?.[idx];
+};
 
 // Encode coordinates as a single integer using bit-packing: key = (x << B) | y
 const COORD_BIT_WIDTH = 8;

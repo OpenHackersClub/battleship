@@ -1,7 +1,7 @@
 import type React from 'react';
 import { createContext, useContext, useMemo, useState } from 'react';
-import { isShipColliding } from '@/lib/domain/collision';
-import { type Ship, shipColorClasses } from './Ship';
+import { isColliding } from '@/lib/domain/collision';
+import { type Ship, shipColorClasses } from '../lib/domain/SeaObject';
 
 const SHIP_COUNT = 5;
 
@@ -31,7 +31,7 @@ const createInitialships = (colSize: number, rowSize: number): Ship[] => {
     const candidate = positionsFrom(startIndex)
       .filter(({ x, y }) => x <= maxX && y <= maxY)
       .map(({ x, y }) => ({ ...baseship, x, y }))
-      .find((ship) => !isShipColliding(ship, acc)) || { x: 0, y: 0 };
+      .find((ship) => !isColliding(ship, acc)) || { x: 0, y: 0 };
 
     acc.push({ ...baseship, x: candidate.x, y: candidate.y });
     return acc;
