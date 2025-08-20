@@ -6,18 +6,18 @@ describe('getPositions', () => {
     id: overrides.id ?? 's1',
     x: overrides.x ?? 0,
     y: overrides.y ?? 0,
-    colorClass: overrides.colorClass ?? 'bg-red-500 border-red-600',
     length: overrides.length ?? 3,
     orientation: overrides.orientation ?? 0,
+    player: overrides.player ?? 'player1',
   });
 
   const makeMissle = (overrides: Partial<Missle> = {}): Missle => ({
     id: overrides.id ?? 'm1',
     x: overrides.x ?? 5,
     y: overrides.y ?? 6,
-    firedBy: overrides.firedBy ?? 'player1',
     length: 1,
     orientation: 0,
+    player: overrides.player ?? 'player1',
   });
 
   it('returns horizontal positions for a horizontal ship', () => {

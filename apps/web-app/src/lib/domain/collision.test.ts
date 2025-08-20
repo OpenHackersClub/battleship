@@ -8,12 +8,13 @@ describe('isColliding', () => {
     x: number,
     y: number,
     length: number,
-    orientation: 0 | 90
+    orientation: 0 | 90,
+    player: string
   ): Ship => ({
     id,
     x,
     y,
-    colorClass: 'bg-red-500 border-red-600',
+    player,
     length,
     orientation,
   });
@@ -22,7 +23,7 @@ describe('isColliding', () => {
     id,
     x,
     y,
-    firedBy: 'player1',
+    player: 'player1',
     length: 1,
     orientation: 0,
   });

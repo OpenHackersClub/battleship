@@ -22,9 +22,11 @@ export const tables = {
     name: 'allships',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      player: State.SQLite.integer(),
+      player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
+      orientation: State.SQLite.integer({ schema: Schema.Literal(0, 90) }),
+      length: State.SQLite.integer(),
       udpatedAt: State.SQLite.integer({
         nullable: true,
         schema: Schema.DateFromNumber,
@@ -36,7 +38,7 @@ export const tables = {
     name: 'missles',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      player: State.SQLite.integer(),
+      player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
       udpatedAt: State.SQLite.integer({
@@ -57,9 +59,18 @@ export const tables = {
   uiState: State.SQLite.clientDocument({
     name: 'uiState',
     schema: Schema.Struct({
-      gridSize: Schema.Number,
+      myShips: Schema.Array(
+        Schema.Struct({
+          id: Schema.String,
+          player: Schema.String,
+          x: Schema.Number,
+          y: Schema.Number,
+          orientation: Schema.Literal(0, 90),
+          length: Schema.Number,
+        })
+      ),
     }),
-    default: { id: SessionIdSymbol, value: { gridSize: 50 } },
+    default: { id: SessionIdSymbol, value: { myShips: [] } },
   }),
 };
 
@@ -74,13 +85,14 @@ export const tables = {
 
 // Events describe data changes (https://docs.livestore.dev/reference/events)
 export const events = {
-  ShipPositionUpdated: Events.synced({
-    name: 'v1.ShipPositionUpdated',
+  ShipPositionCreated: Events.synced({
+    name: 'v1.ShipPositionCreated',
     schema: Schema.Struct({
       id: Schema.String,
-      actor: Schema.String,
-      headX: Schema.Number,
-      headY: Schema.Number,
+      player: Schema.String,
+      x: Schema.Number,
+      y: Schema.Number,
+      orientation: Schema.Literal(0, 90),
       length: Schema.Number,
     }),
   }),
@@ -89,7 +101,7 @@ export const events = {
     name: 'v1.MissleFired',
     schema: Schema.Struct({
       id: Schema.String,
-      actor: Schema.String,
+      player: Schema.String,
       x: Schema.Number,
       y: Schema.Number,
     }),
@@ -99,7 +111,7 @@ export const events = {
     name: 'v1.MissleHit',
     schema: Schema.Struct({
       id: Schema.String,
-      actor: Schema.String,
+      player: Schema.String,
       x: Schema.Number,
       y: Schema.Number,
     }),
@@ -119,16 +131,24 @@ export const events = {
 
 // Materializers are used to map events to state (https://docs.livestore.dev/reference/state/materializers)
 const materializers = State.SQLite.materializers(events, {
-  'v1.ShipPositionUpdated': ({ id, actor, headX, headY }) =>
+  'v1.ShipPositionCreated': ({ id, player, x, y, orientation, length }) =>
     tables.allShips.insert({
       id,
-      player: actor === 'player1' ? 1 : 2,
-      x: headX,
-      y: headY,
+      player,
+      x,
+      y,
+      orientation,
+      length,
       udpatedAt: new Date(),
     }),
-  'v1.MissleFired': ({ id, actor, x, y }) =>
-    tables.missles.insert({ id, player: actor === 'player1' ? 1 : 2, x, y, udpatedAt: new Date() }),
+  'v1.MissleFired': ({ id, player, x, y }) =>
+    tables.missles.insert({
+      id,
+      player,
+      x,
+      y,
+      udpatedAt: new Date(),
+    }),
   'v1.MissleHit': ({ id }) => tables.missles.update({ udpatedAt: new Date() }).where({ id }),
   'v1.MissleMiss': ({ id }) => tables.missles.update({ udpatedAt: new Date() }).where({ id }),
 });

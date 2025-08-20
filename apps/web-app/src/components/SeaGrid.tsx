@@ -1,9 +1,19 @@
-import { SnapModifier } from '@dnd-kit/abstract/modifiers';
 import { RestrictToElement } from '@dnd-kit/dom/modifiers';
+import { SnapModifier } from '@dnd-kit/abstract/modifiers';
 import { type DragDropEvents, DragDropProvider, useDraggable } from '@dnd-kit/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { isColliding } from '@/lib/domain/collision';
-import { useShips } from './GameStateProvider';
+import { useClientDocument } from '@livestore/react';
+import { tables } from '@/livestore/schema';
+
+// Using Tailwind CSS default color classes
+export const SHIP_COLOR_CLASSES = [
+  'bg-red-500 border-red-600', // Vibrant red
+  'bg-teal-500 border-teal-600', // Modern teal
+  'bg-orange-500 border-blue-600', //
+  'bg-amber-400 border-amber-500', // Bright amber
+  'bg-violet-400 border-violet-500', // Rich violet
+];
 
 const Grid = React.forwardRef<
   HTMLDivElement,
@@ -70,7 +80,7 @@ export const SeaGrid: React.FC = () => {
   const [rowSize, _setRowSize] = useState(10);
   const [colSize, _setColSize] = useState(10);
 
-  const { ships, setShips } = useShips();
+  const [{ myShips }, setState] = useClientDocument(tables.uiState);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [cellPixelSize, setCellPixelSize] = useState<{
@@ -109,46 +119,47 @@ export const SeaGrid: React.FC = () => {
           const draggedId = event.operation?.source?.id;
           if (!draggedId) return;
 
-          setShips((prevShips) => {
-            const draggedShip = prevShips.find((ship) => ship.id === draggedId);
-            if (!draggedShip) return prevShips;
+          console.log('draggedId', draggedId);
 
-            const pixelPerCellX = cellPixelSize.width + cellPixelSize.gapX;
-            const pixelPerCellY = cellPixelSize.height + cellPixelSize.gapY;
+          const draggedShip = myShips.find((ship) => ship.id === draggedId);
+          if (!draggedShip) return;
 
-            const proposedX = Math.round(
-              draggedShip.x + event.operation.transform.x / (pixelPerCellX || 1)
-            );
-            const proposedY = Math.round(
-              draggedShip.y + event.operation.transform.y / (pixelPerCellY || 1)
-            );
+          const pixelPerCellX = cellPixelSize.width + cellPixelSize.gapX;
+          const pixelPerCellY = cellPixelSize.height + cellPixelSize.gapY;
 
-            // dnd already handle snap to grid, we do simple coordinate based collision dtection
+          const proposedX = Math.round(
+            draggedShip.x + event.operation.transform.x / (pixelPerCellX || 1)
+          );
+          const proposedY = Math.round(
+            draggedShip.y + event.operation.transform.y / (pixelPerCellY || 1)
+          );
 
-            const proposedShip = {
-              ...draggedShip,
-              x: proposedX,
-              y: proposedY,
-            };
+          // dnd already handle snap to grid, we do simple coordinate based collision dtection
 
-            // // Check for collision at the proposed position
-            if (isColliding(proposedShip, prevShips)) {
-              // If collision detected, keep the ship at its original position
-              return prevShips;
-            }
+          const proposedShip = {
+            ...draggedShip,
+            x: proposedX,
+            y: proposedY,
+          };
 
-            // No collision, update the position
-            return prevShips.map((ship) => (ship.id === draggedId ? proposedShip : ship));
-          });
+          // // Check for collision at the proposed position
+          if (isColliding(proposedShip, [...myShips])) {
+            // If collision detected, keep the ship at its original position
+            return myShips;
+          }
+
+          const newShips = myShips.map((ship) => (ship.id === draggedId ? proposedShip : ship));
+
+          setState({ myShips: newShips });
         }}
       >
         <div className="relative">
           <Grid ref={gridRef} rowSize={rowSize} colSize={colSize}>
-            {ships.map((ship) => (
+            {myShips.map((ship, idx) => (
               <Draggable
                 key={ship.id}
                 id={ship.id}
-                colorClass={ship.colorClass}
+                colorClass={SHIP_COLOR_CLASSES[idx]}
                 modifiers={[
                   SnapModifier.configure({
                     size: {
