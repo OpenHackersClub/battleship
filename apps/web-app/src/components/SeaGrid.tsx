@@ -1,10 +1,5 @@
-import { RestrictToElement } from '@dnd-kit/dom/modifiers';
-import { SnapModifier } from '@dnd-kit/abstract/modifiers';
-import { type DragDropEvents, DragDropProvider, useDraggable } from '@dnd-kit/react';
+import { type DragDropEvents, DragDropProvider } from '@dnd-kit/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { isColliding } from '@/lib/domain/collision';
-import { useClientDocument } from '@livestore/react';
-import { tables } from '@/livestore/schema';
 
 // Using Tailwind CSS default color classes
 export const SHIP_COLOR_CLASSES = [
@@ -41,54 +36,45 @@ const Grid = React.forwardRef<
   );
 });
 
-interface DragDropModifier {
-  configure?: (config: { size?: { x: number; y: number } }) => DragDropModifier;
-  [key: string]: unknown;
-}
-
-// Draggable component
-const Draggable: React.FC<{
-  id: string;
-  modifiers?: DragDropModifier[];
-  style?: React.CSSProperties;
-  colorClass: string;
-}> = ({ id, modifiers = [], style = {}, colorClass = 'bg-blue-500 border-blue-600' }) => {
-  const { ref, isDragging } = useDraggable({
-    id,
-    modifiers,
-  });
-
-  return (
-    <div
-      ref={ref}
-      className={`absolute border-2 rounded cursor-grab flex items-center justify-center text-white font-bold text-sm ${
-        colorClass
-      } ${isDragging ? 'z-50 opacity-80 brightness-90' : 'z-10'}`}
-      style={{
-        ...style,
-        cursor: isDragging ? 'grabbing' : 'grab',
-      }}
-    >
-      {id}
-    </div>
-  );
+export type CellPixelSize = {
+  width: number;
+  height: number;
+  gapX: number;
+  gapY: number;
 };
 
-type DragEndEvent = Parameters<DragDropEvents['dragend']>[0];
+type SeaGridChildrenArg = {
+  cellPixelSize: CellPixelSize;
+  gridRef: React.RefObject<HTMLDivElement | null>;
+};
 
-export const SeaGrid: React.FC = () => {
-  const [rowSize, _setRowSize] = useState(10);
-  const [colSize, _setColSize] = useState(10);
+type SeaGridProps = {
+  player: string;
+  rowSize?: number;
+  colSize?: number;
+  className?: string;
+  onDragEnd?: DragDropEvents['dragend'];
+  children?: React.ReactNode | ((arg: SeaGridChildrenArg) => React.ReactNode);
+};
 
-  const [{ myShips }, setState] = useClientDocument(tables.uiState);
+export const SeaGrid: React.FC<SeaGridProps> = ({
+  player: _player,
+  rowSize: rowSizeProp = 10,
+  colSize: colSizeProp = 10,
+  className,
+  onDragEnd,
+  children,
+}) => {
+  const [rowSize, _setRowSize] = useState(rowSizeProp);
+  const [colSize, _setColSize] = useState(colSizeProp);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
-  const [cellPixelSize, setCellPixelSize] = useState<{
-    width: number;
-    height: number;
-    gapX: number;
-    gapY: number;
-  }>({ width: 0, height: 0, gapX: 0, gapY: 0 });
+  const [cellPixelSize, setCellPixelSize] = useState<CellPixelSize>({
+    width: 0,
+    height: 0,
+    gapX: 0,
+    gapY: 0,
+  });
 
   //   Here we want the ship to be repsonsive as grid cell
   //   TODO use tailwind width class after detect pixel width for once to move per transform.x
@@ -112,81 +98,20 @@ export const SeaGrid: React.FC = () => {
     return () => ro.disconnect();
   }, [rowSize, colSize]);
 
+  const renderedChildren =
+    typeof children === 'function'
+      ? (children as (arg: SeaGridChildrenArg) => React.ReactNode)({
+          cellPixelSize,
+          gridRef,
+        })
+      : children;
+
   return (
-    <div className="p-5">
-      <DragDropProvider
-        onDragEnd={(event: DragEndEvent) => {
-          const draggedId = event.operation?.source?.id;
-          if (!draggedId) return;
-
-          console.log('draggedId', draggedId);
-
-          const draggedShip = myShips.find((ship) => ship.id === draggedId);
-          if (!draggedShip) return;
-
-          const pixelPerCellX = cellPixelSize.width + cellPixelSize.gapX;
-          const pixelPerCellY = cellPixelSize.height + cellPixelSize.gapY;
-
-          const proposedX = Math.round(
-            draggedShip.x + event.operation.transform.x / (pixelPerCellX || 1)
-          );
-          const proposedY = Math.round(
-            draggedShip.y + event.operation.transform.y / (pixelPerCellY || 1)
-          );
-
-          // dnd already handle snap to grid, we do simple coordinate based collision dtection
-
-          const proposedShip = {
-            ...draggedShip,
-            x: proposedX,
-            y: proposedY,
-          };
-
-          // // Check for collision at the proposed position
-          if (isColliding(proposedShip, [...myShips])) {
-            // If collision detected, keep the ship at its original position
-            return myShips;
-          }
-
-          const newShips = myShips.map((ship) => (ship.id === draggedId ? proposedShip : ship));
-
-          setState({ myShips: newShips });
-        }}
-      >
+    <div className={'p-5 ' + (className || '')}>
+      <DragDropProvider onDragEnd={onDragEnd}>
         <div className="relative">
           <Grid ref={gridRef} rowSize={rowSize} colSize={colSize}>
-            {myShips.map((ship, idx) => (
-              <Draggable
-                key={ship.id}
-                id={ship.id}
-                colorClass={SHIP_COLOR_CLASSES[idx]}
-                modifiers={[
-                  SnapModifier.configure({
-                    size: {
-                      x: cellPixelSize.width + cellPixelSize.gapX || 1,
-                      y: cellPixelSize.height + cellPixelSize.gapY || 1,
-                    },
-                  }),
-                  RestrictToElement.configure({
-                    element: gridRef.current,
-                  }),
-                ]}
-                style={{
-                  left: `${ship.x * (cellPixelSize.width + cellPixelSize.gapX)}px`,
-                  top: `${ship.y * (cellPixelSize.height + cellPixelSize.gapY)}px`,
-                  width: `${
-                    ship.orientation === 0
-                      ? ship.length * cellPixelSize.width + (ship.length - 1) * cellPixelSize.gapX
-                      : cellPixelSize.width
-                  }px`,
-                  height: `${
-                    ship.orientation === 90
-                      ? ship.length * cellPixelSize.height + (ship.length - 1) * cellPixelSize.gapY
-                      : cellPixelSize.height
-                  }px`,
-                }}
-              />
-            ))}
+            {renderedChildren}
           </Grid>
         </div>
       </DragDropProvider>

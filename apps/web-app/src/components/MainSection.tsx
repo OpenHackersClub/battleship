@@ -6,7 +6,8 @@ import { useState } from 'react';
 
 import { uiState$ } from '../livestore/queries.js';
 import { events, tables } from '../livestore/schema.js';
-import { SeaGrid } from './SeaGrid.js';
+import { MySeaGrid } from './MySeaGrid.js';
+import { OpponentSeaGrid } from './OpponentSeaGrid.js';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 
@@ -181,7 +182,7 @@ export const MainSection: React.FC = () => {
   const _missiles = store.useQuery(missiles$);
 
   console.log('MainSection render - uiState:', uiState);
-  console.log('MainSection render - gridSize:', uiState?.gridSize);
+  console.log('MainSection render - myShips:', uiState?.myShips?.length);
 
   // Add drag drop monitor for logging all events
   useDragDropMonitor({
@@ -225,14 +226,7 @@ export const MainSection: React.FC = () => {
     // Handle missile firing on opponent's grid
     console.log(`Firing missile at ${x}, ${y}`);
     const missileId = `missile-${Date.now()}-${Math.random()}`;
-    store.commit(
-      events.MissleFired({
-        id: missileId,
-        actor: 'player1',
-        x,
-        y,
-      })
-    );
+    store.commit(events.MissleFired({ id: missileId, player: 'player1', x, y }));
   };
 
   const _handleDragStart = (event: { source: { id: string } }) => {
@@ -266,8 +260,9 @@ export const MainSection: React.FC = () => {
         const newGridY = Math.round((newPixelY - padding) / cellSize);
 
         // Apply bounds checking
-        const maxX = Math.max(0, uiState.gridSize - activeBlock.width);
-        const maxY = Math.max(0, uiState.gridSize - activeBlock.height);
+        const gridSize = 10; // fixed for now
+        const maxX = Math.max(0, gridSize - activeBlock.width);
+        const maxY = Math.max(0, gridSize - activeBlock.height);
 
         const snappedX = Math.max(0, Math.min(maxX, newGridX));
         const snappedY = Math.max(0, Math.min(maxY, newGridY));
@@ -287,12 +282,12 @@ export const MainSection: React.FC = () => {
     <section className="main">
       <div className="flex gap-8 justify-center items-start p-8 w-full max-w-6xl mx-auto">
         <div className="flex-1">
-          <SeaGrid />
+          <MySeaGrid player="player1" />
           <PlayerTitle playerName="Player 1 (You)" />
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1">
-          <SeaGrid />
+          <OpponentSeaGrid player="player2" />
           <PlayerTitle playerName="Player 2" />
         </div>
       </div>

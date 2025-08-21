@@ -9,7 +9,6 @@
     "test": "turbo run test",
     "lint:fix": "turbo run lint:fix",
     "format": "biome format --write .",
-    "check": "biome check .",
     "typecheck": "turbo run typecheck",
     "deploy": "turbo run deploy"
   },

@@ -1,9 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import type { Ship } from '../lib/domain/SeaObject';
-import { useStore } from '@livestore/react';
-import { events, tables } from '@/livestore/schema';
 import { queryDb } from '@livestore/livestore';
+import { useStore } from '@livestore/react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createInitialShips } from '@/lib/domain/GameState';
+import { events, tables } from '@/livestore/schema';
+import type { Ship } from '../lib/domain/SeaObject';
 
 // TODO
 type GameStateContextValue = {};

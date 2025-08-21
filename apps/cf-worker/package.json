@@ -12,7 +12,7 @@
     "deploy": "npm run deploy:sync && npm run deploy:api",
     "deploy:sync": "npm run build && wrangler -c livestore-sync/wrangler.jsonc deploy",
     "deploy:api": "npm run build && wrangler -c api/wrangler.jsonc deploy",
-    "lint": "biome check --fix"
+    "lint:fix": "biome check --fix"
   },
   "dependencies": {
     "multiformats": "^13.3.2",
