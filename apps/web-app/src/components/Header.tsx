@@ -11,7 +11,7 @@ import { Button } from './ui/button';
 export const Header: React.FC = () => {
   const { store } = useStore();
 
-  const { currentGameId } = useGameState();
+  const { currentGameId, newGame } = useGameState();
 
   const missiles$ = useMemo(
     () => queryDb(tables.missles.select(), { label: 'missiles-header' }),
@@ -20,8 +20,7 @@ export const Header: React.FC = () => {
   const missiles = store.useQuery(missiles$);
 
   const handleStartNewGame = () => {
-    const id = `game-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    store.commit(events.GameStarted({ id, gamePhase: 'setup', createdAt: new Date() }));
+    newGame();
   };
 
   return (

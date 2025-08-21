@@ -1,12 +1,13 @@
 import { queryDb } from '@livestore/livestore';
-import { useStore } from '@livestore/react';
-import { createContext, useContext, useEffect, useMemo } from 'react';
+import { useClientDocument, useStore } from '@livestore/react';
+import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { createInitialShips } from '@/lib/domain/GameState';
 import { events, tables } from '@/livestore/schema';
 import type { Ship } from '../lib/domain/SeaObject';
 
 type GameStateContextValue = {
   currentGameId: string | undefined;
+  newGame: () => void;
 };
 
 const GameStateContext = createContext<GameStateContextValue | undefined>(undefined);
@@ -18,28 +19,51 @@ export function useGameState(): GameStateContextValue {
 }
 
 export function GameStateProvider({ children }: { children: React.ReactNode }) {
-  const player = 'player1';
   const { store } = useStore();
 
-  const games$ = queryDb(tables.games.orderBy('createdAt', 'desc'), { label: 'games-gsp' });
-  const games = store.useQuery(games$);
-  const currentGameId = games?.[0]?.id as string | undefined;
+  const [{ currentGameId, currentPlayer }, setState] = useClientDocument(tables.uiState);
+
+  // TODO extxend with matchmaking
+  const newGame = useCallback(() => {
+    const gameId = `game-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const players = Array.from({ length: 2 }, (_, i) => `player-${i + 1}`);
+
+    const currentPlayer = players[0];
+    const opponent = players[1];
+
+    store.commit(
+      events.GameStarted({
+        id: gameId,
+        gamePhase: 'setup',
+        players,
+        createdAt: new Date(),
+      })
+    );
+
+    setState({
+      currentGameId: gameId,
+      currentPlayer,
+      opponent,
+      myShips: [],
+    });
+  }, [store.commit, setState]);
 
   const playerShips = store.useQuery(
     queryDb(
       tables.allShips
-        .where('player', player)
+        .where('player', currentPlayer)
         .where('gameId', currentGameId ?? null)
         .orderBy('id', 'desc'),
-      { deps: [player, currentGameId] }
+      { deps: [currentPlayer, currentGameId] }
     )
   );
 
   useEffect(() => {
     if (!currentGameId) return;
+    console.log('start', currentGameId);
     if (playerShips.length > 0) return;
     const initialships: Ship[] = createInitialShips({
-      player: 'player1',
+      player: currentPlayer,
       colSize: 10,
       rowSize: 10,
     });
@@ -49,7 +73,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         events.ShipPositionCreated({
           id: ship.id,
           gameId: currentGameId,
-          player,
+          player: currentPlayer,
           x: ship.x,
           y: ship.y,
           orientation: ship.orientation,
@@ -57,7 +81,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         })
       )
     );
-  }, [store.commit, playerShips, currentGameId]);
+  }, [store.commit, playerShips, currentGameId, currentPlayer]);
 
   useEffect(() => {
     store.commit(events.uiStateSet({ myShips: playerShips }));
@@ -66,8 +90,9 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       currentGameId,
+      newGame,
     }),
-    [currentGameId]
+    [currentGameId, newGame]
   );
   return <GameStateContext.Provider value={value}>{children}</GameStateContext.Provider>;
 }

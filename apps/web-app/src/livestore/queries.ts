@@ -2,7 +2,7 @@ import { queryDb } from '@livestore/livestore';
 
 import { tables } from './schema.js';
 
-export const uiState$ = queryDb(tables.uiState.get(), { label: 'uiState' });
+// export const uiState$ = queryDb(tables.uiState.get(), { label: 'uiState' });
 
 // Query missiles at a specific grid coordinate (x, y)
 export const missleAt$ = (gameId: string, x: number, y: number) =>
@@ -15,4 +15,12 @@ export const allMissiles$ = (gameId: string) =>
   queryDb(tables.missles.where('gameId', gameId), {
     deps: [gameId],
     label: `missles@${gameId}`,
+  });
+
+// consider multiplayer in future
+
+export const game$ = (gameId: string) =>
+  queryDb(tables.games.where('id', gameId), {
+    deps: [gameId],
+    label: `game@${gameId}`,
   });

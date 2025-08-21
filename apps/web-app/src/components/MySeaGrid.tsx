@@ -94,6 +94,7 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
       }
 
       const newShips = myShips.map((ship) => (ship.id === draggedId ? proposedShip : ship));
+
       setState({ myShips: newShips });
     },
     [myShips, setState]

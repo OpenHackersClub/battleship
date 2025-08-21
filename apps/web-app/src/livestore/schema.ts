@@ -15,6 +15,10 @@ export const tables = {
       gamePhase: State.SQLite.text({
         schema: Schema.Literal('setup', 'playing', 'finished'),
       }),
+      players: State.SQLite.text({
+        nullable: true,
+        schema: Schema.parseJson(Schema.Array(Schema.String)),
+      }),
       createdAt: State.SQLite.integer({
         nullable: true,
         schema: Schema.DateFromNumber,
@@ -70,6 +74,10 @@ export const tables = {
   uiState: State.SQLite.clientDocument({
     name: 'uiState',
     schema: Schema.Struct({
+      currentGameId: Schema.String,
+      currentPlayer: Schema.String,
+      // TODO consider multiplayer
+      opponent: Schema.String,
       myShips: Schema.Array(
         Schema.Struct({
           id: Schema.String,
@@ -81,7 +89,10 @@ export const tables = {
         })
       ),
     }),
-    default: { id: SessionIdSymbol, value: { myShips: [] } },
+    default: {
+      id: SessionIdSymbol,
+      value: { currentGameId: '', currentPlayer: '', opponent: '', myShips: [] },
+    },
   }),
 };
 
@@ -101,6 +112,7 @@ export const events = {
     schema: Schema.Struct({
       id: Schema.String,
       gamePhase: Schema.optional(Schema.Literal('setup', 'playing', 'finished')),
+      players: Schema.optional(Schema.Array(Schema.String)),
       createdAt: Schema.optional(Schema.DateFromNumber),
     }),
   }),
@@ -152,10 +164,11 @@ export const events = {
 
 // Materializers are used to map events to state (https://docs.livestore.dev/reference/state/materializers)
 const materializers = State.SQLite.materializers(events, {
-  'v1.GameStarted': ({ id, gamePhase, createdAt }) =>
+  'v1.GameStarted': ({ id, gamePhase, players, createdAt }) =>
     tables.games.insert({
       id,
       gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
+      players: players ?? null,
       createdAt: createdAt ?? new Date(),
     }),
   'v1.ShipPositionCreated': ({ id, gameId, player, x, y, orientation, length }) =>

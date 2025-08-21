@@ -18,7 +18,6 @@ const AppBody: React.FC = () => (
     <GameStateProvider>
       <Header />
       <MainSection />
-
       <Footer />
     </GameStateProvider>
 
