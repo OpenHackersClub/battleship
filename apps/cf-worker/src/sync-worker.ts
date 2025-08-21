@@ -10,27 +10,23 @@ export class WebSocketServer extends makeDurableObject({
   },
 }) {}
 
-// Note AutoRouter not compatabile
-const syncWorker = makeWorker({
-  validatePayload: (payload: unknown) => {
+export default makeWorker({
+  validatePayload: (payload: any) => {
+    console.log('payload ', payload);
+
+    // Handle null, undefined, or empty payload
+    if (!payload) {
+      throw new Error('Missing payload');
+    }
+
+    // Handle malformed JSON that results in empty object
+    if (typeof payload !== 'object') {
+      throw new Error('Invalid payload format');
+    }
+
     if (payload?.authToken !== 'insecure-token-change-me') {
       throw new Error('Invalid auth token');
     }
   },
   enableCORS: true,
 });
-
-export class WorkerLiveStore extends WorkerEntrypoint {
-  // Currently, entrypoints without a named handler are not supported
-  async fetch(request: Request) {
-    return syncWorker.fetch(
-      request,
-      // @ts-expect-error
-      this.env as Env,
-      // @ts-expect-error
-      this.ctx as ExecutionContext
-    );
-  }
-}
-
-export default WorkerLiveStore;

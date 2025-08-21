@@ -1,28 +1,43 @@
 {
   // Worker configuration
   "name": "battleship-sync-worker",
-  "main": "../src/sync-worker.ts",
+  "main": "./src/sync-worker.ts",
   "compatibility_date": "2025-05-08",
   "compatibility_flags": ["nodejs_compat"],
-
   // Secrets configuration
   "secrets_store_secrets": [],
 
+
+  "dev":{
+    "port": 8787
+  },
   // KV namespaces
   "kv_namespaces": [],
 
   // Environment variables
   "vars": {
-    "LIVESTORE_CF_SYNC_DATABASE_ID": "9b7a07d6-88d6-4663-9dae-a3b1de63450c",
+    "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec",
   },
 
   // Durable Objects
   "durable_objects": {
-    "bindings": [],
+    "bindings": [
+      {
+        "name": "WEBSOCKET_SERVER",
+        "class_name": "WebSocketServer"
+      }
+    ],
   },
 
   // Migrations
-  "migrations": [],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes":[
+       "WebSocketServer" 
+      ]
+    }
+  ],
 
   // D1 Databases
   "d1_databases": [
@@ -33,6 +48,6 @@
     },
   ],
   "observability": {
-    "enabled": true,
+  "enabled": true,
   },
 }

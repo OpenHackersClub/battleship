@@ -1,9 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "battleship-api",
-  "main": "../src/index.ts",
+  "main": "./src/index.ts",
   "compatibility_date": "2025-05-08",
   "compatibility_flags": ["nodejs_compat"],
+
+  "dev":{
+    "port": 8788
+  },
 
   /**
    * Secrets Store Configuration
@@ -41,7 +45,13 @@
    * https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
    */
   "durable_objects": {
-    "bindings": [],
+    "bindings": [
+      {
+        "name": "WEBSOCKET_SERVER",
+        "class_name": "WebSocketServer",
+        "script_name": "battleship-sync-worker"
+      }
+    ],
   },
 
   //
@@ -63,8 +73,7 @@
   "services": [
     {
       "binding": "WORKER_LIVESTORE",
-      "service": "battleship-livestore-sync-worker",
-      "entrypoint": "WorkerLiveStore"
+      "service": "battleship-sync-worker"
     },
   ],
   "observability": {
