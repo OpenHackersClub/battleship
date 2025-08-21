@@ -1,11 +1,57 @@
-import { useStore } from '@livestore/react';
-import { useCallback, useMemo, useState } from 'react';
-import { allMissiles$ } from '../livestore/queries.js';
-import { events } from '../livestore/schema.js';
+import { useClientDocument, useStore } from '@livestore/react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { isColliding } from '@/lib/domain/collision';
+import { allMissiles$, opponentShips$ } from '../livestore/queries.js';
+import { events, tables } from '../livestore/schema.js';
 import { useGameState } from './GameStateProvider.js';
 import { type CellPixelSize, SeaGrid } from './SeaGrid.js';
 
 type Cell = { x: number; y: number };
+
+interface MissileCrossProps {
+  id: string;
+  left: number;
+  top: number;
+  size?: number;
+  thickness?: number;
+  color?: string;
+}
+
+const MissileCross: React.FC<MissileCrossProps> = ({
+  id,
+  left,
+  top,
+  size = 14,
+  thickness = 2,
+  color = '#991b1b',
+}) => (
+  <div key={`missile-cross-${id}`} className="absolute z-10 pointer-events-none">
+    <div
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width: size,
+        height: thickness,
+        backgroundColor: color,
+        transform: 'rotate(45deg)',
+        transformOrigin: 'center',
+      }}
+    />
+    <div
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width: size,
+        height: thickness,
+        backgroundColor: color,
+        transform: 'rotate(-45deg)',
+        transformOrigin: 'center',
+      }}
+    />
+  </div>
+);
 
 export const OpponentSeaGrid = ({ player }: { player: string }) => {
   const [hoverCell, setHoverCell] = useState<Cell | null>(null);
@@ -13,9 +59,21 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
 
   const { currentGameId } = useGameState();
 
+  const [{ opponent }] = useClientDocument(tables.uiState);
+
   const missiles$ = useMemo(() => allMissiles$(currentGameId ?? ''), [currentGameId]);
+  const opponentShipsQuery$ = useMemo(
+    () => opponentShips$(currentGameId ?? '', opponent),
+    [currentGameId, opponent]
+  );
 
   const missiles = store.useQuery(missiles$);
+  const opponentShips = store.useQuery(opponentShipsQuery$);
+
+  useEffect(() => {
+    // debug
+    console.table(opponentShips);
+  }, [opponentShips]);
 
   const computeCellFromEvent = useCallback(
     (
@@ -92,8 +150,19 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                 aria-label="opponent grid overlay"
               />
               {(missiles ?? []).map((m) => {
-                const isCross = m.x === 3;
-                if (isCross) {
+                // Check if missile collides with any opponent ship
+                const missileAsSeaObject = {
+                  id: m.id,
+                  x: m.x,
+                  y: m.y,
+                  length: 1,
+                  orientation: 0 as const,
+                  player: m.player,
+                };
+                const collisionPoint = isColliding(missileAsSeaObject, [...(opponentShips ?? [])]);
+                const isHit = !!collisionPoint;
+
+                if (isHit) {
                   const size = 14;
                   const thickness = 2;
                   const leftCross =
@@ -103,35 +172,14 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                     m.y * (cellPixelSize.height + cellPixelSize.gapY) +
                     (cellPixelSize.height - thickness) / 2;
                   return (
-                    <div
+                    <MissileCross
                       key={`missile-cross-${m.id}`}
-                      className="absolute z-10 pointer-events-none"
-                    >
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: leftCross,
-                          top: topCross,
-                          width: size,
-                          height: thickness,
-                          backgroundColor: '#991b1b',
-                          transform: 'rotate(45deg)',
-                          transformOrigin: 'center',
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: leftCross,
-                          top: topCross,
-                          width: size,
-                          height: thickness,
-                          backgroundColor: '#991b1b',
-                          transform: 'rotate(-45deg)',
-                          transformOrigin: 'center',
-                        }}
-                      />
-                    </div>
+                      id={m.id}
+                      left={leftCross}
+                      top={topCross}
+                      size={size}
+                      thickness={thickness}
+                    />
                   );
                 }
                 const dotSize = 10;

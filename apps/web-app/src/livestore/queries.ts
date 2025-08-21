@@ -24,3 +24,12 @@ export const game$ = (gameId: string) =>
     deps: [gameId],
     label: `game@${gameId}`,
   });
+
+export const opponentShips$ = (gameId: string, opponentPlayer: string) =>
+  queryDb(
+    tables.allShips.where('gameId', gameId).where('player', opponentPlayer).orderBy('id', 'desc'),
+    {
+      deps: [gameId, opponentPlayer],
+      label: `opponentShips@${gameId}-${opponentPlayer}`,
+    }
+  );

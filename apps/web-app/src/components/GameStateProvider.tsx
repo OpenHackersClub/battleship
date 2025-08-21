@@ -21,7 +21,7 @@ export function useGameState(): GameStateContextValue {
 export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const { store } = useStore();
 
-  const [{ currentGameId, currentPlayer }, setState] = useClientDocument(tables.uiState);
+  const [{ currentGameId, currentPlayer, opponent }, setState] = useClientDocument(tables.uiState);
 
   // TODO extxend with matchmaking
   const newGame = useCallback(() => {
@@ -60,7 +60,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!currentGameId) return;
-    console.log('start', currentGameId);
+    console.log('new game:', currentGameId);
     if (playerShips.length > 0) return;
     const initialships: Ship[] = createInitialShips({
       player: currentPlayer,
@@ -68,7 +68,25 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       rowSize: 10,
     });
 
+    // TODO by agent / server
+    const initialOpponentShips: Ship[] = createInitialShips({
+      player: opponent,
+      colSize: 10,
+      rowSize: 10,
+    });
+
     store.commit(
+      ...initialOpponentShips.map((ship: Ship) =>
+        events.ShipPositionCreated({
+          id: ship.id,
+          gameId: currentGameId,
+          player: opponent,
+          x: ship.x,
+          y: ship.y,
+          orientation: ship.orientation,
+          length: ship.length,
+        })
+      ),
       ...initialships.map((ship: Ship) =>
         events.ShipPositionCreated({
           id: ship.id,
@@ -81,7 +99,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         })
       )
     );
-  }, [store.commit, playerShips, currentGameId, currentPlayer]);
+  }, [store.commit, playerShips, currentGameId, currentPlayer, opponent]);
 
   useEffect(() => {
     store.commit(events.uiStateSet({ myShips: playerShips }));

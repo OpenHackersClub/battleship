@@ -1,5 +1,8 @@
 import { getPositions, type SeaObject } from '@/lib/domain/SeaObject';
 
+// TODO implement a popular mechanics where ships need to be 1 block away from each other
+// one way to do it is use a expanded ship object so we can still just find the virtual intersection
+
 // we simplify to find any overlapping coordinate and don't use the @dnd-kit/collision which is drag operation & view position based
 /**
  *
