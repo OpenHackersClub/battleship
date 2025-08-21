@@ -5,6 +5,22 @@ import { Events, makeSchema, Schema, SessionIdSymbol, State } from '@livestore/l
 
 // You can model your state as SQLite tables (https://docs.livestore.dev/reference/state/sqlite-schema)
 export const tables = {
+  // game round / session
+  // game id is supposedly the foreign key, not encoreced as not yet supported at livestore https://github.com/livestorejs/livestore/discussions/400
+
+  games: State.SQLite.table({
+    name: 'games',
+    columns: {
+      id: State.SQLite.text({ primaryKey: true }),
+      gamePhase: State.SQLite.text({
+        schema: Schema.Literal('setup', 'playing', 'finished'),
+      }),
+      createdAt: State.SQLite.integer({
+        nullable: true,
+        schema: Schema.DateFromNumber,
+      }),
+    },
+  }),
   // myShips: State.SQLite.table({
   //   name: "myships",
   //   columns: {
@@ -22,6 +38,7 @@ export const tables = {
     name: 'allships',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
+      gameId: State.SQLite.text({ nullable: true }),
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
@@ -38,6 +55,7 @@ export const tables = {
     name: 'missles',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
+      gameId: State.SQLite.text({ nullable: true }),
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
@@ -47,14 +65,7 @@ export const tables = {
       }),
     },
   }),
-  gameBoard: State.SQLite.clientDocument({
-    name: 'gameBoard',
-    schema: Schema.Struct({
-      gamePhase: Schema.Literal('setup', 'playing', 'finished'),
-      currentPlayer: Schema.Number,
-    }),
-    default: { id: SessionIdSymbol, value: { gamePhase: 'setup', currentPlayer: 1 } },
-  }),
+
   // Client documents can be used for local-only state (e.g. form inputs)
   uiState: State.SQLite.clientDocument({
     name: 'uiState',
@@ -85,10 +96,19 @@ export const tables = {
 
 // Events describe data changes (https://docs.livestore.dev/reference/events)
 export const events = {
+  GameStarted: Events.synced({
+    name: 'v1.GameStarted',
+    schema: Schema.Struct({
+      id: Schema.String,
+      gamePhase: Schema.optional(Schema.Literal('setup', 'playing', 'finished')),
+      createdAt: Schema.optional(Schema.DateFromNumber),
+    }),
+  }),
   ShipPositionCreated: Events.synced({
     name: 'v1.ShipPositionCreated',
     schema: Schema.Struct({
       id: Schema.String,
+      gameId: Schema.optional(Schema.String),
       player: Schema.String,
       x: Schema.Number,
       y: Schema.Number,
@@ -101,6 +121,7 @@ export const events = {
     name: 'v1.MissleFired',
     schema: Schema.Struct({
       id: Schema.String,
+      gameId: Schema.optional(Schema.String),
       player: Schema.String,
       x: Schema.Number,
       y: Schema.Number,
@@ -131,9 +152,16 @@ export const events = {
 
 // Materializers are used to map events to state (https://docs.livestore.dev/reference/state/materializers)
 const materializers = State.SQLite.materializers(events, {
-  'v1.ShipPositionCreated': ({ id, player, x, y, orientation, length }) =>
+  'v1.GameStarted': ({ id, gamePhase, createdAt }) =>
+    tables.games.insert({
+      id,
+      gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
+      createdAt: createdAt ?? new Date(),
+    }),
+  'v1.ShipPositionCreated': ({ id, gameId, player, x, y, orientation, length }) =>
     tables.allShips.insert({
       id,
+      gameId,
       player,
       x,
       y,
@@ -141,9 +169,10 @@ const materializers = State.SQLite.materializers(events, {
       length,
       udpatedAt: new Date(),
     }),
-  'v1.MissleFired': ({ id, player, x, y }) =>
+  'v1.MissleFired': ({ id, gameId, player, x, y }) =>
     tables.missles.insert({
       id,
+      gameId,
       player,
       x,
       y,

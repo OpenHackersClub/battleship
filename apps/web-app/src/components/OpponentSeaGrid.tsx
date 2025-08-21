@@ -1,7 +1,8 @@
-import { queryDb } from '@livestore/livestore';
 import { useStore } from '@livestore/react';
-import { useCallback, useState } from 'react';
-import { events, tables } from '../livestore/schema.js';
+import { useCallback, useMemo, useState } from 'react';
+import { allMissiles$ } from '../livestore/queries.js';
+import { events } from '../livestore/schema.js';
+import { useGameState } from './GameStateProvider.js';
 import { type CellPixelSize, SeaGrid } from './SeaGrid.js';
 
 type Cell = { x: number; y: number };
@@ -9,7 +10,11 @@ type Cell = { x: number; y: number };
 export const OpponentSeaGrid = ({ player }: { player: string }) => {
   const [hoverCell, setHoverCell] = useState<Cell | null>(null);
   const { store } = useStore();
-  const missiles$ = queryDb(tables.missles.select(), { label: 'missiles-opponent' });
+
+  const { currentGameId } = useGameState();
+
+  const missiles$ = useMemo(() => allMissiles$(currentGameId ?? ''), [currentGameId]);
+
   const missiles = store.useQuery(missiles$);
 
   const computeCellFromEvent = useCallback(
@@ -49,10 +54,18 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
             const cell = computeCellFromEvent(e, gridRef.current, cellPixelSize);
             if (cell) {
               console.log('fire atttempt', cell.x, cell.y);
-              const alreadyFired = (missiles ?? []).some((m) => m.x === cell.x && m.y === cell.y);
+              const alreadyFired = missiles.find((m) => m.x === cell.x && m.y === cell.y);
               if (!alreadyFired) {
                 const missileId = `missile-${Date.now()}-${Math.random()}`;
-                store.commit(events.MissleFired({ id: missileId, player, x: cell.x, y: cell.y }));
+                store.commit(
+                  events.MissleFired({
+                    id: missileId,
+                    gameId: currentGameId,
+                    player,
+                    x: cell.x,
+                    y: cell.y,
+                  })
+                );
               }
             }
           };
@@ -79,6 +92,48 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                 aria-label="opponent grid overlay"
               />
               {(missiles ?? []).map((m) => {
+                const isCross = m.x === 3;
+                if (isCross) {
+                  const size = 14;
+                  const thickness = 2;
+                  const leftCross =
+                    m.x * (cellPixelSize.width + cellPixelSize.gapX) +
+                    (cellPixelSize.width - size) / 2;
+                  const topCross =
+                    m.y * (cellPixelSize.height + cellPixelSize.gapY) +
+                    (cellPixelSize.height - thickness) / 2;
+                  return (
+                    <div
+                      key={`missile-cross-${m.id}`}
+                      className="absolute z-10 pointer-events-none"
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: leftCross,
+                          top: topCross,
+                          width: size,
+                          height: thickness,
+                          backgroundColor: '#991b1b',
+                          transform: 'rotate(45deg)',
+                          transformOrigin: 'center',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: leftCross,
+                          top: topCross,
+                          width: size,
+                          height: thickness,
+                          backgroundColor: '#991b1b',
+                          transform: 'rotate(-45deg)',
+                          transformOrigin: 'center',
+                        }}
+                      />
+                    </div>
+                  );
+                }
                 const dotSize = 10;
                 const mLeft =
                   m.x * (cellPixelSize.width + cellPixelSize.gapX) +
@@ -112,12 +167,7 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
           );
         }}
       </SeaGrid>
-      <div className="mt-2 flex justify-center items-center">
-        Fired:
-        <span className="px-2.5 py-0.5 rounded-full bg-gray-800 text-white text-xs font-medium m-2">
-          {missiles?.length ?? 0}
-        </span>
-      </div>
+      <div className="mt-2" />
     </>
   );
 };

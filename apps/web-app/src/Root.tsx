@@ -15,10 +15,11 @@ import { getStoreId } from './util/store-id.js';
 
 const AppBody: React.FC = () => (
   <section className="container p-6">
-    <Header />
-
     <GameStateProvider>
+      <Header />
       <MainSection />
+
+      <Footer />
     </GameStateProvider>
 
     <Footer />

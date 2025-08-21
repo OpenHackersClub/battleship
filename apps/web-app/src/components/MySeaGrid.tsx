@@ -55,9 +55,7 @@ const DraggableShip: React.FC<{
         height,
         cursor: isDragging ? 'grabbing' : 'grab',
       }}
-    >
-      {id}
-    </div>
+    ></div>
   );
 };
 

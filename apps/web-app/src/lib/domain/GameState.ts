@@ -21,13 +21,14 @@ export const createInitialShips = ({
     });
 
   return Array.from({ length: shipCount }).reduce<Ship[]>((acc, _, i) => {
+    const orientation = Math.random() < 0.5 ? 0 : 90;
     const baseship: Ship = {
-      id: String(i + 1),
+      id: crypto.randomUUID(),
       length: i + 1,
       x: 0,
       y: 0,
       player,
-      orientation: i % 2 === 0 ? 0 : 90,
+      orientation,
     };
 
     const occupiedCols = baseship.orientation === 0 ? baseship.length : 1;
@@ -35,7 +36,7 @@ export const createInitialShips = ({
     const maxX = colSize - occupiedCols;
     const maxY = rowSize - occupiedRows;
 
-    const startIndex = i * colSize; // prefer starting on row i
+    const startIndex = Math.floor(Math.random() * (colSize * rowSize));
     const candidate = positionsFrom(startIndex)
       .filter(({ x, y }) => x <= maxX && y <= maxY)
       .map(({ x, y }) => ({ ...baseship, x, y }))
