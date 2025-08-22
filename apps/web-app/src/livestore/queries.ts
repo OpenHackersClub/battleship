@@ -1,6 +1,6 @@
 import { queryDb } from '@livestore/livestore';
 
-import { tables } from './schema.js';
+import { tables } from './schema';
 
 // export const uiState$ = queryDb(tables.uiState.get(), { label: 'uiState' });
 
@@ -17,7 +17,22 @@ export const allMissiles$ = (gameId: string) =>
     label: `missles@${gameId}`,
   });
 
-// consider multiplayer in future
+export const allGames$ = () =>
+  queryDb(tables.games.orderBy('createdAt', 'desc'), {
+    deps: [],
+    label: `game@all`,
+  });
+
+export const currentGame$ = () =>
+  queryDb(
+    tables.games.orderBy('createdAt', 'desc').first({
+      fallback: () => null,
+    }),
+    {
+      deps: [],
+      label: `game@current`,
+    }
+  );
 
 export const game$ = (gameId: string) =>
   queryDb(tables.games.where('id', gameId), {

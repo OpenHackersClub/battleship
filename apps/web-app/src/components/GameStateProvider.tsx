@@ -1,7 +1,8 @@
 import { queryDb } from '@livestore/livestore';
-import { useClientDocument, useStore } from '@livestore/react';
+import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { createInitialShips } from '@/lib/domain/GameState';
+import { currentGame$ } from '@/livestore/queries';
 import { events, tables } from '@/livestore/schema';
 import type { Ship } from '../lib/domain/SeaObject';
 
@@ -23,6 +24,21 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
 
   const [{ currentGameId, currentPlayer, opponent }, setState] = useClientDocument(tables.uiState);
 
+  const currentGame = useQuery(currentGame$());
+
+  useEffect(() => {
+    console.log('currentGame', currentGame?.id, currentGame?.createdAt);
+
+    if (currentGame) {
+      setState({
+        currentGameId: currentGame.id,
+        currentPlayer: currentGame.players[0],
+        opponent: currentGame.players[1],
+        myShips: [],
+      });
+    }
+  }, [currentGame, setState]);
+
   // TODO extxend with matchmaking
   const newGame = useCallback(() => {
     const gameId = `game-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -31,6 +47,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     const currentPlayer = players[0];
     const opponent = players[1];
 
+    console.log('Game Started', gameId, players);
     store.commit(
       events.GameStarted({
         id: gameId,

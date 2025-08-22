@@ -5,13 +5,13 @@ import { FPSMeter } from '@overengineering/fps-meter';
 import type React from 'react';
 import { unstable_batchedUpdates as batchUpdates } from 'react-dom';
 
-import { Footer } from './components/Footer.js';
-import { GameStateProvider } from './components/GameStateProvider.js';
-import { Header } from './components/Header.js';
-import { MainSection } from './components/MainSection.js';
-import { schema } from './livestore/schema.js';
+import { Footer } from './components/Footer';
+import { GameStateProvider } from './components/GameStateProvider';
+import { Header } from './components/Header';
+import { MainSection } from './components/MainSection';
+import { schema } from './livestore/schema';
 import LiveStoreWorker from './livestore.worker?worker';
-import { getStoreId } from './util/store-id.js';
+import { getStoreId } from './util/store-id';
 
 const AppBody: React.FC = () => (
   <section className="container p-6">

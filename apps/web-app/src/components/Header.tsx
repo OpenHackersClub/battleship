@@ -2,7 +2,7 @@ import { queryDb } from '@livestore/livestore';
 import { useStore } from '@livestore/react';
 import type React from 'react';
 import { useMemo } from 'react';
-import { events, tables } from '@/livestore/schema';
+import { tables } from '@/livestore/schema';
 import { useGameState } from './GameStateProvider';
 import { Alert, AlertDescription } from './ui/alert';
 // import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from './ui/menubar';

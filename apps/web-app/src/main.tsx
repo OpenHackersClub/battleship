@@ -2,7 +2,7 @@ import './index.css';
 
 import ReactDOM from 'react-dom/client';
 
-import { App } from './Root.js';
+import { App } from './Root';
 
 const rootElement = document.getElementById('react-app');
 if (!rootElement) {

@@ -1,10 +1,10 @@
 import { useClientDocument, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isColliding } from '@/lib/domain/collision';
-import { allMissiles$, opponentShips$ } from '../livestore/queries.js';
-import { events, tables } from '../livestore/schema.js';
-import { useGameState } from './GameStateProvider.js';
-import { type CellPixelSize, SeaGrid } from './SeaGrid.js';
+import { allMissiles$, opponentShips$ } from '../livestore/queries';
+import { events, tables } from '../livestore/schema';
+import { useGameState } from './GameStateProvider';
+import { type CellPixelSize, SeaGrid } from './SeaGrid';
 
 type Cell = { x: number; y: number };
 

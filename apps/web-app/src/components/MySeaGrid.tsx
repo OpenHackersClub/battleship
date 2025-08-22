@@ -6,7 +6,7 @@ import type React from 'react';
 import { useCallback, useRef } from 'react';
 import { isColliding } from '@/lib/domain/collision';
 import { tables } from '@/livestore/schema';
-import { type CellPixelSize, SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid.js';
+import { type CellPixelSize, SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
 
 const DraggableShip: React.FC<{
   id: string;

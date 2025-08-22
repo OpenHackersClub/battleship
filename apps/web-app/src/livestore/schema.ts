@@ -16,11 +16,11 @@ export const tables = {
         schema: Schema.Literal('setup', 'playing', 'finished'),
       }),
       players: State.SQLite.text({
-        nullable: true,
+        nullable: false,
         schema: Schema.parseJson(Schema.Array(Schema.String)),
       }),
       createdAt: State.SQLite.integer({
-        nullable: true,
+        nullable: false,
         schema: Schema.DateFromNumber,
       }),
     },
@@ -32,7 +32,7 @@ export const tables = {
   //     player: State.SQLite.integer(),
   //     x: State.SQLite.integer(),
   //     y: State.SQLite.integer(),
-  //     udpatedAt: State.SQLite.integer({
+  //     updatedAt: State.SQLite.integer({
   //       nullable: true,
   //       schema: Schema.DateFromNumber,
   //     }),
@@ -48,7 +48,7 @@ export const tables = {
       y: State.SQLite.integer(),
       orientation: State.SQLite.integer({ schema: Schema.Literal(0, 90) }),
       length: State.SQLite.integer(),
-      udpatedAt: State.SQLite.integer({
+      updatedAt: State.SQLite.integer({
         nullable: true,
         schema: Schema.DateFromNumber,
       }),
@@ -63,7 +63,7 @@ export const tables = {
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
-      udpatedAt: State.SQLite.integer({
+      updatedAt: State.SQLite.integer({
         nullable: true,
         schema: Schema.DateFromNumber,
       }),
@@ -168,7 +168,7 @@ const materializers = State.SQLite.materializers(events, {
     tables.games.insert({
       id,
       gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
-      players: players ?? null,
+      players: players ?? [],
       createdAt: createdAt ?? new Date(),
     }),
   'v1.ShipPositionCreated': ({ id, gameId, player, x, y, orientation, length }) =>
@@ -180,7 +180,6 @@ const materializers = State.SQLite.materializers(events, {
       y,
       orientation,
       length,
-      udpatedAt: new Date(),
     }),
   'v1.MissleFired': ({ id, gameId, player, x, y }) =>
     tables.missles.insert({
@@ -189,10 +188,9 @@ const materializers = State.SQLite.materializers(events, {
       player,
       x,
       y,
-      udpatedAt: new Date(),
     }),
-  'v1.MissleHit': ({ id }) => tables.missles.update({ udpatedAt: new Date() }).where({ id }),
-  'v1.MissleMiss': ({ id }) => tables.missles.update({ udpatedAt: new Date() }).where({ id }),
+  'v1.MissleHit': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
+  'v1.MissleMiss': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
 });
 
 const state = State.SQLite.makeState({ tables, materializers });
