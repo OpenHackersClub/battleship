@@ -9,7 +9,7 @@ import { Footer } from './components/Footer';
 import { GameStateProvider } from './components/GameStateProvider';
 import { Header } from './components/Header';
 import { MainSection } from './components/MainSection';
-import { schema } from './livestore/schema';
+import { schema } from '@battleship/schema';
 import LiveStoreWorker from './livestore.worker?worker';
 import { getStoreId } from './util/store-id';
 

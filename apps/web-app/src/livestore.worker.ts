@@ -1,7 +1,7 @@
 import { makeWorker } from '@livestore/adapter-web/worker';
 import { makeCfSync } from '@livestore/sync-cf';
 
-import { schema } from './livestore/schema';
+import { schema } from '@battleship/schema/schema';
 
 makeWorker({
   schema,

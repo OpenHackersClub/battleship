@@ -4,9 +4,23 @@ import { Events, makeSchema, Schema, SessionIdSymbol, State } from '@livestore/l
 // We need to decrypt our own ships (to show on UI) but not the others
 
 // You can model your state as SQLite tables (https://docs.livestore.dev/reference/state/sqlite-schema)
+
+/**
+ * Game: Each game session with a grid size, players, and 1 winner at the end
+ *
+ * Turn: Consist of single action by single player, it's anoother turn when player taking next action conseuctively or another player take action 
+ * Turn count ranges from [0, to 2 * grid Size ]
+ *
+ * Action: User can fire missle to a single cell of cooridnates (x,y) of single oppoonent
+
+ */
+
 export const tables = {
-  // game round / session
   // game id is supposedly the foreign key, not encoreced as not yet supported at livestore https://github.com/livestorejs/livestore/discussions/400
+
+  // offers a simple way to query
+  // - current (controlling) player of the turn
+  // - current turn count
 
   games: State.SQLite.table({
     name: 'games',
@@ -19,10 +33,23 @@ export const tables = {
         nullable: false,
         schema: Schema.parseJson(Schema.Array(Schema.String)),
       }),
+      currentTurn: State.SQLite.integer(),
+      currentPlayer: State.SQLite.text(),
+
       createdAt: State.SQLite.integer({
         nullable: false,
         schema: Schema.DateFromNumber,
       }),
+    },
+  }),
+
+  actions: State.SQLite.table({
+    name: 'actions',
+    columns: {
+      id: State.SQLite.text({ primaryKey: true }),
+      gameId: State.SQLite.text({ primaryKey: true }),
+      player: State.SQLite.text({ primaryKey: true }),
+      turn: State.SQLite.integer(),
     },
   }),
   // myShips: State.SQLite.table({
@@ -59,12 +86,12 @@ export const tables = {
     name: 'missles',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      gameId: State.SQLite.text({ nullable: true }),
+      gameId: State.SQLite.text({ nullable: false }),
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
-      updatedAt: State.SQLite.integer({
-        nullable: true,
+      createdAt: State.SQLite.integer({
+        nullable: false,
         schema: Schema.DateFromNumber,
       }),
     },
@@ -75,7 +102,7 @@ export const tables = {
     name: 'uiState',
     schema: Schema.Struct({
       currentGameId: Schema.String,
-      currentPlayer: Schema.String,
+      myPlayer: Schema.String,
       // TODO consider multiplayer
       opponent: Schema.String,
       myShips: Schema.Array(
@@ -91,10 +118,10 @@ export const tables = {
     }),
     default: {
       id: SessionIdSymbol,
-      value: { currentGameId: '', currentPlayer: '', opponent: '', myShips: [] },
+      value: { currentGameId: '', myPlayer: '', opponent: '', myShips: [] },
     },
   }),
-};
+} as const;
 
 // For the grid, we use a cartesian plot and follow css coordinates convention
 // for x right is positive, for y down is positive
@@ -129,35 +156,47 @@ export const events = {
     }),
   }),
 
+  ActionCompleted: Events.synced({
+    name: 'v1.ActionCompleted',
+    schema: Schema.Struct({
+      id: Schema.String,
+      gameId: Schema.String,
+      player: Schema.String,
+      turn: Schema.Number,
+      action: Schema.String,
+    }),
+  }),
+
   MissleFired: Events.synced({
     name: 'v1.MissleFired',
     schema: Schema.Struct({
       id: Schema.String,
-      gameId: Schema.optional(Schema.String),
+      gameId: Schema.String,
       player: Schema.String,
       x: Schema.Number,
       y: Schema.Number,
+      createdAt: Schema.optional(Schema.DateFromNumber),
     }),
   }),
 
-  MissleHit: Events.synced({
-    name: 'v1.MissleHit',
-    schema: Schema.Struct({
-      id: Schema.String,
-      player: Schema.String,
-      x: Schema.Number,
-      y: Schema.Number,
-    }),
-  }),
+  // MissleHit: Events.synced({
+  //   name: 'v1.MissleHit',
+  //   schema: Schema.Struct({
+  //     id: Schema.String,
+  //     player: Schema.String,
+  //     x: Schema.Number,
+  //     y: Schema.Number,
+  //   }),
+  // }),
 
-  MissleMiss: Events.synced({
-    name: 'v1.MissleMiss',
-    schema: Schema.Struct({
-      id: Schema.String,
-      x: Schema.Number,
-      y: Schema.Number,
-    }),
-  }),
+  // MissleMiss: Events.synced({
+  //   name: 'v1.MissleMiss',
+  //   schema: Schema.Struct({
+  //     id: Schema.String,
+  //     x: Schema.Number,
+  //     y: Schema.Number,
+  //   }),
+  // }),
 
   uiStateSet: tables.uiState.set,
 };
@@ -168,6 +207,8 @@ const materializers = State.SQLite.materializers(events, {
     tables.games.insert({
       id,
       gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
+      currentTurn: 0,
+      currentPlayer: players?.[0] ?? '',
       players: players ?? [],
       createdAt: createdAt ?? new Date(),
     }),
@@ -181,18 +222,39 @@ const materializers = State.SQLite.materializers(events, {
       orientation,
       length,
     }),
-  'v1.MissleFired': ({ id, gameId, player, x, y }) =>
+  'v1.ActionCompleted': ({ id, gameId, player, turn }) => {
+    return [
+      tables.games.update({
+        id: gameId,
+        currentPlayer: player,
+        currentTurn: turn + 1,
+      }),
+      tables.actions.insert({
+        id,
+        gameId,
+        player,
+        turn,
+      }),
+    ];
+  },
+  'v1.MissleFired': ({ id, gameId, player, x, y, createdAt }) =>
     tables.missles.insert({
       id,
       gameId,
       player,
       x,
       y,
+      createdAt: createdAt ?? new Date(),
     }),
-  'v1.MissleHit': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
-  'v1.MissleMiss': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
+  // 'v1.MissleHit': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
+  // 'v1.MissleMiss': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
 });
 
 const state = State.SQLite.makeState({ tables, materializers });
 
 export const schema = makeSchema({ events, state });
+
+// Export types for external use
+export type Tables = typeof tables;
+export type BattleshipEvents = typeof events;
+export type BattleshipSchema = typeof schema;

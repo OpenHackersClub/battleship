@@ -1,0 +1,33 @@
+{
+    "compilerOptions": {
+      "target": "ES2022",
+      "useDefineForClassFields": true,
+      "lib": ["ES2020"],
+      "module": "ESNext",
+      "skipLibCheck": true,
+  
+      /* Bundler mode */
+      "moduleResolution": "bundler",
+      "resolveJsonModule": true,
+      "isolatedModules": true,
+      "noEmit": false,
+      "declaration": true,
+      "outDir": "./dist",
+  
+      /* Path mapping */
+      "baseUrl": ".",
+      "paths": {
+        "@/*": ["./src/*"]
+      },
+      /* Linting */
+      "strict": true,
+      "strictNullChecks": true,
+      "noUncheckedIndexedAccess": true,
+      // "noUnusedLocals": true,
+      // "noUnusedParameters": true,
+      "noFallthroughCasesInSwitch": true
+    },
+    "include": ["./src"],
+    "exclude": ["node_modules", "dist"]
+  }
+  
