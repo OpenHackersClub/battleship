@@ -1,10 +1,11 @@
-import { useClientDocument, useStore } from '@livestore/react';
+import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isColliding } from '@/lib/domain/collision';
-import { allMissiles$, opponentShips$ } from '../livestore/queries';
-import { events, tables } from '../livestore/schema';
+import { events, tables } from '@battleship/schema/schema';
+import { allMissiles$, currentGame$, opponentShips$ } from '@battleship/schema/queries';
 import { useGameState } from './GameStateProvider';
 import { type CellPixelSize, SeaGrid } from './SeaGrid';
+import { stringifyCoordinates } from '@/util/coordinates';
 
 type Cell = { x: number; y: number };
 
@@ -59,7 +60,9 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
 
   const { currentGameId } = useGameState();
 
-  const [{ opponent }] = useClientDocument(tables.uiState);
+  const { currentPlayer } = useQuery(currentGame$());
+
+  const [{ myPlayer, opponent }] = useClientDocument(tables.uiState);
 
   const missiles$ = useMemo(() => allMissiles$(currentGameId ?? ''), [currentGameId]);
   const opponentShipsQuery$ = useMemo(
@@ -111,7 +114,7 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
           const handleClick = (e: React.MouseEvent) => {
             const cell = computeCellFromEvent(e, gridRef.current, cellPixelSize);
             if (cell) {
-              console.log('fire atttempt', cell.x, cell.y);
+              console.log('fire atttempt', `by ${myPlayer}`, stringifyCoordinates(cell.x, cell.y));
               const alreadyFired = missiles.find((m) => m.x === cell.x && m.y === cell.y);
               if (!alreadyFired) {
                 const missileId = `missile-${Date.now()}-${Math.random()}`;
@@ -119,9 +122,10 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                   events.MissleFired({
                     id: missileId,
                     gameId: currentGameId,
-                    player,
+                    player: currentPlayer,
                     x: cell.x,
                     y: cell.y,
+                    createdAt: new Date(),
                   })
                 );
               }

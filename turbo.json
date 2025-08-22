@@ -6,6 +6,7 @@
       "outputs": ["dist/**", "build/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
+      "dependsOn": ["^@battleship/schema#build"],
       "cache": false,
       "persistent": true
     },

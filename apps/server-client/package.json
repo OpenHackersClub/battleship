@@ -1,0 +1,32 @@
+{
+  "name": "server-client",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "tsx index.ts",
+    "dev:watch": "vite-node --watch index.ts",
+    "start": "node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@battleship/schema": "workspace:^",
+    "@livestore/adapter-node": "0.3.1",
+    "@livestore/livestore": "0.3.1",
+    "@livestore/sync-cf": "0.3.1",
+    "effect": "^3.17.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2",
+    "vite": "^6.3.4",
+    "vite-node": "^3.2.4",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}

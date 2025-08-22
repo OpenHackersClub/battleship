@@ -1,8 +1,8 @@
 import { queryDb } from '@livestore/livestore';
-import { useStore } from '@livestore/react';
+import { useQuery, useStore } from '@livestore/react';
 import type React from 'react';
 import { useMemo } from 'react';
-import { tables } from '@/livestore/schema';
+import { currentGame$, tables } from '@battleship/schema';
 import { useGameState } from './GameStateProvider';
 import { Alert, AlertDescription } from './ui/alert';
 // import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from './ui/menubar';
@@ -10,6 +10,8 @@ import { Button } from './ui/button';
 
 export const Header: React.FC = () => {
   const { store } = useStore();
+
+  const currentGame = useQuery(currentGame$());
 
   const { currentGameId, newGame } = useGameState();
 
@@ -38,6 +40,14 @@ export const Header: React.FC = () => {
               <span>No game</span>
             )}
           </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            <span>Turn:</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-gray-800 text-white text-xs font-medium">
+              {currentGame?.turn ?? 0}
+            </span>
+          </div>
+
           <div className="flex items-center gap-2 text-sm">
             <span>Fired:</span>
             <span className="px-2.5 py-0.5 rounded-full bg-gray-800 text-white text-xs font-medium">
