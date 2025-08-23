@@ -16,7 +16,7 @@ export const Header: React.FC = () => {
   const { currentGameId, newGame } = useGameState();
 
   const missiles$ = useMemo(
-    () => queryDb(tables.missles.select(), { label: 'missiles-header' }),
+    () => queryDb(tables.missiles.select(), { label: 'missiles-header' }),
     []
   );
   const missiles = store.useQuery(missiles$);
@@ -42,9 +42,16 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 text-sm">
+            <span>Current player:</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-gray-800 text-white text-xs font-medium">
+              {currentGame?.currentPlayer ?? ''}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
             <span>Turn:</span>
             <span className="px-2.5 py-0.5 rounded-full bg-gray-800 text-white text-xs font-medium">
-              {currentGame?.turn ?? 0}
+              {currentGame?.currentTurn ?? 0}
             </span>
           </div>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Missile, Ship } from '@/lib/domain/SeaObject';
+import type { Missile, Ship } from './SeaObject';
 import { isColliding } from './collision';
 
 describe('isColliding', () => {

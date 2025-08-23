@@ -52,19 +52,6 @@ export const tables = {
       turn: State.SQLite.integer(),
     },
   }),
-  // myShips: State.SQLite.table({
-  //   name: "myships",
-  //   columns: {
-  //     id: State.SQLite.text({ primaryKey: true }),
-  //     player: State.SQLite.integer(),
-  //     x: State.SQLite.integer(),
-  //     y: State.SQLite.integer(),
-  //     updatedAt: State.SQLite.integer({
-  //       nullable: true,
-  //       schema: Schema.DateFromNumber,
-  //     }),
-  //   },
-  // }),
   allShips: State.SQLite.table({
     name: 'allships',
     columns: {
@@ -85,10 +72,10 @@ export const tables = {
   /**
    * For missle fire attempt
    * use a separate table for confirmed missle hit/miss (missle could be illegal action if out of turn)
-   * so we can subscibre update (insert) to this missles & avoid infinite trigger
+   * so we can subscibre update (insert) to this missiles & avoid infinite trigger
    */
-  missles: State.SQLite.table({
-    name: 'missles',
+  missiles: State.SQLite.table({
+    name: 'missiles',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
       gameId: State.SQLite.text({ nullable: false }),
@@ -183,6 +170,7 @@ export const events = {
       id: Schema.String,
       gameId: Schema.String,
       player: Schema.String,
+      nextPlayer: Schema.String,
       turn: Schema.Number,
     }),
   }),
@@ -247,30 +235,25 @@ const materializers = State.SQLite.materializers(events, {
       orientation,
       length,
     }),
-  // 'v1.ActionCompleted': ({ id, gameId, player, turn }) => {
-  //   return [
-  //     tables.games.where({ id: gameId }).update({
-  //       currentPlayer: player,
-  //       currentTurn: turn + 1,
-  //     }),
-  //     tables.actions.insert({
-  //       id,
-  //       gameId,
-  //       player,
-  //       turn,
-  //     }),
-  //   ];
-  // },
-  'v1.ActionCompleted': ({ id, gameId, player, turn }) => {
-    return tables.actions.insert({
-      id,
-      gameId,
-      player,
-      turn,
-    });
+
+  'v1.ActionCompleted': ({ id, gameId, player, nextPlayer, turn }) => {
+    console.log('iterate turn', gameId, turn + 1, nextPlayer);
+    return [
+      tables.actions.insert({
+        id,
+        gameId,
+        player,
+        turn,
+      }),
+      tables.games.where({ id: gameId }).update({
+        currentTurn: turn + 1,
+        currentPlayer: nextPlayer,
+      }),
+    ];
   },
+
   'v1.MissileFired': ({ id, gameId, player, x, y, createdAt }) =>
-    tables.missles.insert({
+    tables.missiles.insert({
       id,
       gameId,
       player,

@@ -1,19 +1,19 @@
-import * as process from 'process';
-
 import { makeAdapter } from '@livestore/adapter-node';
 import { createStorePromise, queryDb } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
-import { Effect, Schedule, Console } from 'effect';
+import { isColliding } from '@battleship/domain';
 
-import { events, schema, tables, stringifyCoordinates } from '@battleship/schema';
+import process from 'node:process';
+import { events, schema, tables } from '@battleship/schema';
 
 import {
   currentGame$,
-  gameActions$,
   missiles$,
-  lastMissile$,
   missileResults$,
+  opponentShips$,
   lastAction$,
+  lastMissile$,
+  missileResultsById$,
 } from '@battleship/schema/queries';
 
 const LIVESTORE_SYNC_URL = 'ws://localhost:8787';
@@ -25,11 +25,6 @@ export const allGames$ = () =>
   });
 
 const main = async () => {
-  const state = {
-    currentTurn: 0,
-    missleCount: 0,
-  };
-
   const adapter = makeAdapter({
     storage: { type: 'fs', baseDirectory: 'tmp' },
     sync: { backend: makeCfSync({ url: LIVESTORE_SYNC_URL }), onSyncError: 'ignore' },
@@ -54,7 +49,7 @@ const main = async () => {
   await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
   // Get current game and setup event listeners
   const currentGame = store.query(currentGame$());
-  const allGames = store.query(allGames$());
+
   console.log('Server Store Id:', store.storeId);
   console.log('Current game:', currentGame);
 
@@ -65,16 +60,24 @@ const main = async () => {
     const currentGameId = currentGame.id;
     const players = currentGame.players;
     const myPlayer = players[0]; // Assuming first player is the current player
+    const opponentPlayer = players[1];
 
-    console.log('start listening to missiles', currentGameId, myPlayer);
-
-    // Check if there are any existing missiles to understand the data state
-    const existingMissiles = store.query(missiles$(currentGameId, myPlayer));
-    console.log('Existing missiles in store:', existingMissiles?.length || 0, existingMissiles);
+    console.log(
+      'start listening to missiles',
+      currentGameId,
+      myPlayer,
+      'opponent:',
+      opponentPlayer
+    );
 
     // Listen to MissileFired events for all players - moved outside Effect loop
     store.subscribe(missiles$(currentGameId, myPlayer), {
-      skipInitialRun: false, // Changed to false to see initial data
+      skipInitialRun: false,
+      // Issue: when specified true, onUpdate effect not being trigger even aftewards
+
+      onSubscribe: (query$) => {
+        console.log('subscribed');
+      },
       onUpdate: (missiles) => {
         console.log('🚀 Missiles fired:', missiles.length, 'myPlayer', myPlayer, currentGame);
 
@@ -86,6 +89,42 @@ const main = async () => {
 
         console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y);
 
+        // Get opponent ships to check for collision
+        const opponentShips = opponentPlayer
+          ? store.query(opponentShips$(currentGameId, opponentPlayer))
+          : [];
+        console.log('Opponent ships:', opponentShips?.length || 0, opponentShips);
+
+        // Create missile as SeaObject for collision detection
+        const missileSeaObject = {
+          id: lastMissile.id,
+          x: lastMissile.x,
+          y: lastMissile.y,
+          length: 1, // missiles always have length 1
+          orientation: 0 as const, // missiles always have orientation 0
+          player: lastMissile.player,
+        };
+
+        // Check for collision using the isColliding function
+        const hitPosition = isColliding(missileSeaObject, opponentShips || []);
+        const isHit = hitPosition !== undefined;
+
+        console.log('Collision check:', isHit ? 'HIT!' : 'MISS', 'at position', hitPosition);
+
+        const lastAction = store.query(lastAction$(currentGameId));
+
+        // store.query(lastMissile$(currentGameId, myPlayer));
+
+        const missileResult = store.query(missileResultsById$(currentGameId, lastMissile.id));
+
+        console.log('missile result', missileResult);
+
+        if (missileResult?.length > 0) {
+          return;
+        }
+        console.log('last action', lastAction);
+
+        const newTurn = (lastAction?.turn ?? 0) + 1;
         /**
          *
          * Only 1 action per player at each turn
@@ -97,18 +136,8 @@ const main = async () => {
          *
          */
 
-        // TODO check existing turn
-
-        // workaround issue: commiting at next tick (0.3.1): error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
-        setTimeout(() => {
-          store.commit(
-            // events.ActionCompleted({
-            //   id: crypto.randomUUID(),
-            //   gameId: currentGameId,
-            //   player: myPlayer,
-            //   turn: state.currentTurn,
-            // }),
-            events.MissileHit({
+        const missileResultEvent = isHit
+          ? events.MissileHit({
               id: lastMissile.id,
               gameId: currentGameId,
               x: lastMissile.x,
@@ -116,13 +145,31 @@ const main = async () => {
               player: myPlayer,
               createdAt: new Date(),
             })
+          : events.MissileMiss({
+              id: lastMissile.id,
+              gameId: currentGameId,
+              x: lastMissile.x,
+              y: lastMissile.y,
+              player: myPlayer,
+              createdAt: new Date(),
+            });
+
+        // workaround issue: commiting at next tick (0.3.1): error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
+        setTimeout(() => {
+          // Fire either MissileHit or MissileMiss event based on collision result
+          store.commit(
+            events.ActionCompleted({
+              id: crypto.randomUUID(),
+              gameId: currentGameId,
+              player: myPlayer,
+              turn: newTurn,
+              nextPlayer: isHit ? myPlayer : opponentPlayer,
+            }),
+            missileResultEvent
           );
         }, 1);
       },
     });
-
-    const existing = store.query(missileResults$(currentGameId, myPlayer));
-    console.log('existing missile results:', existing);
   }
 };
 

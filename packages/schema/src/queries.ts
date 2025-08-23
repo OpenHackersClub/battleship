@@ -4,15 +4,15 @@ import { tables } from './schema';
 
 // Query missiles at a specific grid coordinate (x, y)
 export const missleAt$ = (gameId: string, x: number, y: number) =>
-  queryDb(tables.missles.where('gameId', gameId).where('x', x).where('y', y), {
+  queryDb(tables.missiles.where('gameId', gameId).where('x', x).where('y', y), {
     deps: [x, y, gameId],
-    label: `missles@${gameId}-${x},${y}`,
+    label: `missiles@${gameId}-${x},${y}`,
   });
 
 export const allMissiles$ = (gameId: string) =>
-  queryDb(tables.missles.where('gameId', gameId), {
+  queryDb(tables.missiles.where('gameId', gameId), {
     deps: [gameId],
-    label: `missles@${gameId}`,
+    label: `missiles@${gameId}`,
   });
 
 export const allGames$ = () =>
@@ -49,7 +49,7 @@ export const opponentShips$ = (gameId: string, opponentPlayer: string) =>
 
 export const missiles$ = (gameId: string, player: string) =>
   queryDb(
-    tables.missles.where('gameId', gameId).where('player', player).orderBy('createdAt', 'desc'),
+    tables.missiles.where('gameId', gameId).where('player', player).orderBy('createdAt', 'desc'),
     {
       deps: [gameId, player],
       label: `missiles-fired@${gameId}-${player}`,
@@ -68,9 +68,15 @@ export const missileResults$ = (gameId: string, player: string) =>
     }
   );
 
+export const missileResultsById$ = (gameId: string, id: string) =>
+  queryDb(tables.missileResults.where('id', id), {
+    deps: [id],
+    label: `missile-results@${gameId}-${id}`,
+  });
+
 export const lastMissile$ = (gameId: string, player: string) =>
   queryDb(
-    tables.missles
+    tables.missiles
       .where('gameId', gameId)
       .where('player', player)
       .orderBy('createdAt', 'desc')
