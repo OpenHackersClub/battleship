@@ -82,6 +82,11 @@ export const tables = {
     },
   }),
 
+  /**
+   * For missle fire attempt
+   * use a separate table for confirmed missle hit/miss (missle could be illegal action if out of turn)
+   * so we can subscibre update (insert) to this missles & avoid infinite trigger
+   */
   missles: State.SQLite.table({
     name: 'missles',
     columns: {
@@ -90,6 +95,22 @@ export const tables = {
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
+      createdAt: State.SQLite.integer({
+        nullable: false,
+        schema: Schema.DateFromNumber,
+      }),
+    },
+  }),
+
+  missileResults: State.SQLite.table({
+    name: 'missle-results',
+    columns: {
+      id: State.SQLite.text({ primaryKey: true }),
+      gameId: State.SQLite.text({ nullable: false }),
+      player: State.SQLite.text(),
+      x: State.SQLite.integer(),
+      y: State.SQLite.integer(),
+      isHit: State.SQLite.boolean(),
       createdAt: State.SQLite.integer({
         nullable: false,
         schema: Schema.DateFromNumber,
@@ -163,40 +184,44 @@ export const events = {
       gameId: Schema.String,
       player: Schema.String,
       turn: Schema.Number,
-      action: Schema.String,
     }),
   }),
 
-  MissleFired: Events.synced({
-    name: 'v1.MissleFired',
+  MissileFired: Events.synced({
+    name: 'v1.MissileFired',
     schema: Schema.Struct({
       id: Schema.String,
       gameId: Schema.String,
       player: Schema.String,
       x: Schema.Number,
       y: Schema.Number,
-      createdAt: Schema.optional(Schema.DateFromNumber),
+      createdAt: Schema.DateFromNumber,
     }),
   }),
 
-  // MissleHit: Events.synced({
-  //   name: 'v1.MissleHit',
-  //   schema: Schema.Struct({
-  //     id: Schema.String,
-  //     player: Schema.String,
-  //     x: Schema.Number,
-  //     y: Schema.Number,
-  //   }),
-  // }),
+  MissileHit: Events.synced({
+    name: 'v1.MissileHit',
+    schema: Schema.Struct({
+      id: Schema.String,
+      gameId: Schema.String,
+      player: Schema.String,
+      x: Schema.Number,
+      y: Schema.Number,
+      createdAt: Schema.DateFromNumber,
+    }),
+  }),
 
-  // MissleMiss: Events.synced({
-  //   name: 'v1.MissleMiss',
-  //   schema: Schema.Struct({
-  //     id: Schema.String,
-  //     x: Schema.Number,
-  //     y: Schema.Number,
-  //   }),
-  // }),
+  MissileMiss: Events.synced({
+    name: 'v1.MissileMiss',
+    schema: Schema.Struct({
+      id: Schema.String,
+      gameId: Schema.String,
+      player: Schema.String,
+      x: Schema.Number,
+      y: Schema.Number,
+      createdAt: Schema.DateFromNumber,
+    }),
+  }),
 
   uiStateSet: tables.uiState.set,
 };
@@ -222,32 +247,57 @@ const materializers = State.SQLite.materializers(events, {
       orientation,
       length,
     }),
+  // 'v1.ActionCompleted': ({ id, gameId, player, turn }) => {
+  //   return [
+  //     tables.games.where({ id: gameId }).update({
+  //       currentPlayer: player,
+  //       currentTurn: turn + 1,
+  //     }),
+  //     tables.actions.insert({
+  //       id,
+  //       gameId,
+  //       player,
+  //       turn,
+  //     }),
+  //   ];
+  // },
   'v1.ActionCompleted': ({ id, gameId, player, turn }) => {
-    return [
-      tables.games.update({
-        id: gameId,
-        currentPlayer: player,
-        currentTurn: turn + 1,
-      }),
-      tables.actions.insert({
-        id,
-        gameId,
-        player,
-        turn,
-      }),
-    ];
+    return tables.actions.insert({
+      id,
+      gameId,
+      player,
+      turn,
+    });
   },
-  'v1.MissleFired': ({ id, gameId, player, x, y, createdAt }) =>
+  'v1.MissileFired': ({ id, gameId, player, x, y, createdAt }) =>
     tables.missles.insert({
       id,
       gameId,
       player,
       x,
       y,
-      createdAt: createdAt ?? new Date(),
+      createdAt,
     }),
-  // 'v1.MissleHit': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
-  // 'v1.MissleMiss': ({ id }) => tables.missles.update({ updatedAt: new Date() }).where({ id }),
+  'v1.MissileHit': ({ id, gameId, player, x, y, createdAt }) =>
+    tables.missileResults.insert({
+      id,
+      gameId,
+      player,
+      x,
+      y,
+      isHit: true,
+      createdAt,
+    }),
+  'v1.MissileMiss': ({ id, gameId, player, x, y, createdAt }) =>
+    tables.missileResults.insert({
+      id,
+      gameId,
+      player,
+      x,
+      y,
+      isHit: false,
+      createdAt,
+    }),
 });
 
 const state = State.SQLite.makeState({ tables, materializers });
