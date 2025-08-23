@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPositions, type Missile, type Ship } from '@/lib/domain/SeaObject';
+import { getPositions, type Missile, type Ship } from './SeaObject';
 
 describe('getPositions', () => {
   const makeShip = (overrides: Partial<Ship> = {}): Ship => ({

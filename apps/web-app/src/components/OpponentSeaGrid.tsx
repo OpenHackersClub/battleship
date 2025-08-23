@@ -1,3 +1,4 @@
+import { isColliding } from '@battleship/domain';
 import {
   allMissiles$,
   currentGame$,
@@ -7,7 +8,6 @@ import {
 import { events, tables } from '@battleship/schema/schema';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { isColliding } from '@/lib/domain/collision';
 import { stringifyCoordinates } from '@/util/coordinates';
 import { useGameState } from './GameStateProvider';
 import { type CellPixelSize, SeaGrid } from './SeaGrid';

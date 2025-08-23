@@ -1,10 +1,9 @@
+import { createInitialShips, type Ship } from '@battleship/domain';
 import { currentGame$ } from '@battleship/schema/queries';
 import { events, tables } from '@battleship/schema/schema';
 import { queryDb } from '@livestore/livestore';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
-import { createInitialShips } from '@/lib/domain/GameState';
-import type { Ship } from '../lib/domain/SeaObject';
 
 type GameStateContextValue = {
   currentGameId: string | undefined;
@@ -34,7 +33,6 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         currentGameId: currentGame.id,
         myPlayer: currentGame.players[0],
         opponent: currentGame.players[1],
-        myShips: [],
       });
     }
   }, [currentGame, setState]);
