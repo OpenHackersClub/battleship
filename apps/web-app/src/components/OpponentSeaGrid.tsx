@@ -1,11 +1,16 @@
+import {
+  allMissiles$,
+  currentGame$,
+  missileResults$,
+  opponentShips$,
+} from '@battleship/schema/queries';
+import { events, tables } from '@battleship/schema/schema';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isColliding } from '@/lib/domain/collision';
-import { events, tables } from '@battleship/schema/schema';
-import { allMissiles$, currentGame$, opponentShips$ } from '@battleship/schema/queries';
+import { stringifyCoordinates } from '@/util/coordinates';
 import { useGameState } from './GameStateProvider';
 import { type CellPixelSize, SeaGrid } from './SeaGrid';
-import { stringifyCoordinates } from '@/util/coordinates';
 
 type Cell = { x: number; y: number };
 
@@ -60,9 +65,9 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
 
   const { currentGameId } = useGameState();
 
-  const { currentPlayer } = useQuery(currentGame$());
-
   const [{ myPlayer, opponent }] = useClientDocument(tables.uiState);
+
+  const missileResults = store.useQuery(missileResults$(currentGameId ?? '', myPlayer));
 
   const missiles$ = useMemo(() => allMissiles$(currentGameId ?? ''), [currentGameId]);
   const opponentShipsQuery$ = useMemo(
@@ -70,7 +75,6 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
     [currentGameId, opponent]
   );
 
-  const missiles = store.useQuery(missiles$);
   const opponentShips = store.useQuery(opponentShipsQuery$);
 
   useEffect(() => {
@@ -115,14 +119,14 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
             const cell = computeCellFromEvent(e, gridRef.current, cellPixelSize);
             if (cell) {
               console.log('fire atttempt', `by ${myPlayer}`, stringifyCoordinates(cell.x, cell.y));
-              const alreadyFired = missiles.find((m) => m.x === cell.x && m.y === cell.y);
+              const alreadyFired = missileResults.find((m) => m.x === cell.x && m.y === cell.y);
               if (!alreadyFired) {
                 const missileId = `missile-${Date.now()}-${Math.random()}`;
                 store.commit(
-                  events.MissleFired({
+                  events.MissileFired({
                     id: missileId,
                     gameId: currentGameId,
-                    player: currentPlayer,
+                    player: myPlayer,
                     x: cell.x,
                     y: cell.y,
                     createdAt: new Date(),
@@ -153,7 +157,7 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                 }}
                 aria-label="opponent grid overlay"
               />
-              {(missiles ?? []).map((m) => {
+              {(missileResults ?? []).map((m) => {
                 // Check if missile collides with any opponent ship
                 const missileAsSeaObject = {
                   id: m.id,

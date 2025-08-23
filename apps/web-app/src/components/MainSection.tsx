@@ -1,13 +1,14 @@
-import type React from 'react';
+import { missileResults$ } from '@battleship/schema/queries';
+import { tables } from '@battleship/schema/schema';
 
 import { useDragDropMonitor } from '@dnd-kit/react';
-import { useClientDocument } from '@livestore/react';
-import { Separator } from './ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-
-import { tables } from '@battleship/schema';
+import { useClientDocument, useStore } from '@livestore/react';
+import type React from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MySeaGrid } from './MySeaGrid';
 import { OpponentSeaGrid } from './OpponentSeaGrid';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Separator } from './ui/separator';
 
 export const PlayerTitle = ({ playerName }: { playerName: string }) => {
   return (
@@ -26,6 +27,8 @@ export const PlayerTitle = ({ playerName }: { playerName: string }) => {
 
 export const MainSection: React.FC = () => {
   const [{ currentGameId, myPlayer, opponent }, setState] = useClientDocument(tables.uiState);
+  const { store } = useStore();
+
   // Add drag drop monitor for logging all events
   useDragDropMonitor({
     onBeforeDragStart: (event, manager) => {

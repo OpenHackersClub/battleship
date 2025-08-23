@@ -1,8 +1,8 @@
+import { currentGame$, tables } from '@battleship/schema';
 import { queryDb } from '@livestore/livestore';
 import { useQuery, useStore } from '@livestore/react';
 import type React from 'react';
 import { useMemo } from 'react';
-import { currentGame$, tables } from '@battleship/schema';
 import { useGameState } from './GameStateProvider';
 import { Alert, AlertDescription } from './ui/alert';
 // import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from './ui/menubar';

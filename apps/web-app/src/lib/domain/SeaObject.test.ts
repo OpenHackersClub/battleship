@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPositions, type Missle, type Ship } from '@/lib/domain/SeaObject';
+import { getPositions, type Missile, type Ship } from '@/lib/domain/SeaObject';
 
 describe('getPositions', () => {
   const makeShip = (overrides: Partial<Ship> = {}): Ship => ({
@@ -11,7 +11,7 @@ describe('getPositions', () => {
     player: overrides.player ?? 'player1',
   });
 
-  const makeMissle = (overrides: Partial<Missle> = {}): Missle => ({
+  const makeMissile = (overrides: Partial<Missile> = {}): Missile => ({
     id: overrides.id ?? 'm1',
     x: overrides.x ?? 5,
     y: overrides.y ?? 6,
@@ -42,7 +42,7 @@ describe('getPositions', () => {
   });
 
   it('returns a single position for a missle', () => {
-    const missle = makeMissle({ x: 7, y: 8 });
+    const missle = makeMissile({ x: 7, y: 8 });
     const positions = getPositions(missle);
     expect(positions).toEqual([{ x: 7, y: 8 }]);
   });

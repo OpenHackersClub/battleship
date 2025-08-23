@@ -56,6 +56,18 @@ export const missiles$ = (gameId: string, player: string) =>
     }
   );
 
+export const missileResults$ = (gameId: string, player: string) =>
+  queryDb(
+    tables.missileResults
+      .where('gameId', gameId)
+      .where('player', player)
+      .orderBy('createdAt', 'desc'),
+    {
+      deps: [gameId, player],
+      label: `missile-results@${gameId}-${player}`,
+    }
+  );
+
 export const lastMissile$ = (gameId: string, player: string) =>
   queryDb(
     tables.missles

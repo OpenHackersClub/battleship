@@ -1,9 +1,9 @@
+import { currentGame$ } from '@battleship/schema/queries';
+import { events, tables } from '@battleship/schema/schema';
 import { queryDb } from '@livestore/livestore';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { createInitialShips } from '@/lib/domain/GameState';
-import { currentGame$ } from '@battleship/schema/queries';
-import { events, tables } from '@battleship/schema/schema';
 import type { Ship } from '../lib/domain/SeaObject';
 
 type GameStateContextValue = {

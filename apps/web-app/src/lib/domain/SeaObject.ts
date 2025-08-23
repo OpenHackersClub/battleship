@@ -8,7 +8,7 @@ export type SeaObject = {
 };
 
 // currently length can only be 1, although we could do bombs of various shapes
-export type Missle = SeaObject & {
+export type Missile = SeaObject & {
   length: 1;
   orientation: 0;
 };

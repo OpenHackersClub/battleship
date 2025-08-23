@@ -1,3 +1,4 @@
+import { tables } from '@battleship/schema';
 import { SnapModifier } from '@dnd-kit/abstract/modifiers';
 import { RestrictToElement } from '@dnd-kit/dom/modifiers';
 import { type DragDropEvents, useDraggable } from '@dnd-kit/react';
@@ -5,7 +6,6 @@ import { useClientDocument } from '@livestore/react';
 import type React from 'react';
 import { useCallback, useRef } from 'react';
 import { isColliding } from '@/lib/domain/collision';
-import { tables } from '@battleship/schema';
 import { type CellPixelSize, SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
 
 const DraggableShip: React.FC<{

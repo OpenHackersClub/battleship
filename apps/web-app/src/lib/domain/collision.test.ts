@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Missle, Ship } from '@/lib/domain/SeaObject';
+import type { Missile, Ship } from '@/lib/domain/SeaObject';
 import { isColliding } from './collision';
 
 describe('isColliding', () => {
@@ -19,7 +19,7 @@ describe('isColliding', () => {
     orientation,
   });
 
-  const createMissile = (id: string, x: number, y: number): Missle => ({
+  const createMissile = (id: string, x: number, y: number): Missile => ({
     id,
     x,
     y,
