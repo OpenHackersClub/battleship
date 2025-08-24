@@ -69,7 +69,6 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
 
   const missileResults = store.useQuery(missileResults$(currentGameId ?? '', myPlayer));
 
-  const missiles$ = useMemo(() => allMissiles$(currentGameId ?? ''), [currentGameId]);
   const opponentShipsQuery$ = useMemo(
     () => opponentShips$(currentGameId ?? '', opponent),
     [currentGameId, opponent]
@@ -118,7 +117,7 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
           const handleClick = (e: React.MouseEvent) => {
             const cell = computeCellFromEvent(e, gridRef.current, cellPixelSize);
             if (cell) {
-              console.log('fire atttempt', `by ${myPlayer}`, stringifyCoordinates(cell.x, cell.y));
+              console.log('fire attempt', `by ${myPlayer}`, stringifyCoordinates(cell.x, cell.y));
               const alreadyFired = missileResults.find((m) => m.x === cell.x && m.y === cell.y);
               if (!alreadyFired) {
                 const missileId = `missile-${Date.now()}-${Math.random()}`;

@@ -1,19 +1,17 @@
 import { makeAdapter } from '@livestore/adapter-node';
 import { createStorePromise, queryDb } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
-import { isColliding } from '@battleship/domain';
+import { isColliding, pickEmptyTarget } from '@battleship/domain';
 
-import process from 'node:process';
 import { events, schema, tables } from '@battleship/schema';
 
 import {
   currentGame$,
   missiles$,
-  missileResults$,
   opponentShips$,
   lastAction$,
-  lastMissile$,
   missileResultsById$,
+  allMissiles$,
 } from '@battleship/schema/queries';
 
 const LIVESTORE_SYNC_URL = 'ws://localhost:8787';
@@ -24,21 +22,156 @@ export const allGames$ = () =>
     label: `game@all`,
   });
 
+// TODO fix to use schema types
+/**
+ * Processes a missile and determines if it hits or misses opponent ships
+ * @param store - The livestore instance
+ * @param missile - The missile object to process
+ * @param gameId - The current game ID
+ * @param currentPlayer - The player who fired the missile
+ * @param opponentPlayer - The opponent player
+ * @returns Object containing hit result, missile result event, and next player
+ */
+const processMissile = (
+  store: any,
+  missile: any,
+  gameId: string,
+  currentPlayer: string,
+  opponentPlayer: string
+) => {
+  // Get opponent ships to check for collision
+  const opponentShips = opponentPlayer ? store.query(opponentShips$(gameId, opponentPlayer)) : [];
+
+  // Create missile as SeaObject for collision detection
+  const missileSeaObject = {
+    id: missile.id,
+    x: missile.x,
+    y: missile.y,
+    length: 1, // missiles always have length 1
+    orientation: 0 as const, // missiles always have orientation 0
+    player: missile.player,
+  };
+
+  // Check for collision using the isColliding function
+  const hitPosition = isColliding(missileSeaObject, opponentShips || []);
+  const isHit = hitPosition !== undefined;
+
+  console.log('Collision check:', isHit ? 'HIT!' : 'MISS', 'at position', hitPosition);
+
+  // Create appropriate missile result event
+  const missileResultEvent = isHit
+    ? events.MissileHit({
+        id: missile.id,
+        gameId: gameId,
+        x: missile.x,
+        y: missile.y,
+        player: currentPlayer,
+        createdAt: new Date(),
+      })
+    : events.MissileMiss({
+        id: missile.id,
+        gameId: gameId,
+        x: missile.x,
+        y: missile.y,
+        player: currentPlayer,
+        createdAt: new Date(),
+      });
+
+  // Determine next player (if hit, current player gets another turn)
+  const nextPlayer = isHit ? currentPlayer : opponentPlayer;
+
+  return {
+    isHit,
+    hitPosition,
+    missileResultEvent,
+    nextPlayer,
+  };
+};
+
+const agentTurn = (store: any, currentGame: any, myPlayer: string, opponentPlayer: string) => {
+  console.log('🤖 Agent turn for player:', myPlayer, currentGame.currentTurn);
+
+  const gameId = currentGame.id;
+
+  // Get all missiles fired in this game to avoid duplicates
+  const allFiredMissiles = store.query(allMissiles$(gameId)) || [];
+  const firedCoordinates = new Set<string>(
+    allFiredMissiles.map((missile: any) => `${missile.x},${missile.y}`)
+  );
+
+  console.log('Already fired at:', firedCoordinates.size, 'locations');
+
+  const targetCell = pickEmptyTarget({
+    rowSize: 10,
+    colSize: 10,
+    firedCoordinates,
+  });
+
+  if (!targetCell) {
+    console.log('🤖 No available cells to fire at');
+    return;
+  }
+
+  console.log(`🤖 Agent firing at (${targetCell.x}, ${targetCell.y})`);
+
+  // Create missile
+  const missileId = crypto.randomUUID();
+  const missile = {
+    id: missileId,
+    gameId: gameId,
+    player: myPlayer,
+    x: targetCell.x,
+    y: targetCell.y,
+    createdAt: new Date(),
+  };
+
+  // Add a small delay to ensure the missile is processed before we check results
+  setTimeout(() => {
+    // Fire the missile first
+    store.commit(events.MissileFired(missile));
+    // Process the missile result using our extracted function
+    const { missileResultEvent, nextPlayer } = processMissile(
+      store,
+      missile,
+      gameId,
+      myPlayer,
+      opponentPlayer
+    );
+
+    // Get current turn for action completion
+    const lastAction = store.query(lastAction$(gameId));
+    const newTurn = (lastAction?.turn ?? 0) + 1;
+
+    // Commit the result
+    store.commit(
+      events.ActionCompleted({
+        id: crypto.randomUUID(),
+        gameId: gameId,
+        player: myPlayer,
+        turn: newTurn,
+        nextPlayer: nextPlayer,
+      }),
+      missileResultEvent
+    );
+
+    console.log(`🤖 Agent turn completed. Next player: ${nextPlayer}`);
+  }, 100); // Small delay to ensure missile is registered
+};
+
 const main = async () => {
   const adapter = makeAdapter({
     storage: { type: 'fs', baseDirectory: 'tmp' },
     sync: { backend: makeCfSync({ url: LIVESTORE_SYNC_URL }), onSyncError: 'ignore' },
   });
 
-  const storeId = process.env.VITE_STORE_ID;
+  const storeId = (globalThis as any)?.process?.env?.VITE_STORE_ID;
   if (!storeId) {
     throw new Error(
       'VITE_STORE_ID is not set in env variables. Configure same store id across all clients'
     );
   }
 
-  // necessary to use same store id across
-  console.log('setup store');
+  // necessary to use same store id across all clients
   const store = await createStorePromise({
     adapter,
     schema,
@@ -55,7 +188,6 @@ const main = async () => {
 
   // TODO unsubscribe listener when game change
 
-  // Set up missile subscription outside the Effect loop to prevent recreation
   if (currentGame) {
     const currentGameId = currentGame.id;
     const players = currentGame.players;
@@ -75,7 +207,7 @@ const main = async () => {
       skipInitialRun: false,
       // Issue: when specified true, onUpdate effect not being trigger even aftewards
 
-      onSubscribe: (query$) => {
+      onSubscribe: () => {
         console.log('subscribed');
       },
       onUpdate: (missiles) => {
@@ -89,27 +221,14 @@ const main = async () => {
 
         console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y);
 
-        // Get opponent ships to check for collision
-        const opponentShips = opponentPlayer
-          ? store.query(opponentShips$(currentGameId, opponentPlayer))
-          : [];
-        console.log('Opponent ships:', opponentShips?.length || 0, opponentShips);
-
-        // Create missile as SeaObject for collision detection
-        const missileSeaObject = {
-          id: lastMissile.id,
-          x: lastMissile.x,
-          y: lastMissile.y,
-          length: 1, // missiles always have length 1
-          orientation: 0 as const, // missiles always have orientation 0
-          player: lastMissile.player,
-        };
-
-        // Check for collision using the isColliding function
-        const hitPosition = isColliding(missileSeaObject, opponentShips || []);
-        const isHit = hitPosition !== undefined;
-
-        console.log('Collision check:', isHit ? 'HIT!' : 'MISS', 'at position', hitPosition);
+        // Process missile to determine hit/miss and create result event
+        const { missileResultEvent, nextPlayer } = processMissile(
+          store,
+          lastMissile,
+          currentGameId,
+          myPlayer,
+          opponentPlayer
+        );
 
         const lastAction = store.query(lastAction$(currentGameId));
 
@@ -122,7 +241,6 @@ const main = async () => {
         if (missileResult?.length > 0) {
           return;
         }
-        console.log('last action', lastAction);
 
         const newTurn = (lastAction?.turn ?? 0) + 1;
         /**
@@ -136,24 +254,6 @@ const main = async () => {
          *
          */
 
-        const missileResultEvent = isHit
-          ? events.MissileHit({
-              id: lastMissile.id,
-              gameId: currentGameId,
-              x: lastMissile.x,
-              y: lastMissile.y,
-              player: myPlayer,
-              createdAt: new Date(),
-            })
-          : events.MissileMiss({
-              id: lastMissile.id,
-              gameId: currentGameId,
-              x: lastMissile.x,
-              y: lastMissile.y,
-              player: myPlayer,
-              createdAt: new Date(),
-            });
-
         // workaround issue: commiting at next tick (0.3.1): error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
         setTimeout(() => {
           // Fire either MissileHit or MissileMiss event based on collision result
@@ -163,11 +263,28 @@ const main = async () => {
               gameId: currentGameId,
               player: myPlayer,
               turn: newTurn,
-              nextPlayer: isHit ? myPlayer : opponentPlayer,
+              nextPlayer: nextPlayer,
             }),
             missileResultEvent
           );
         }, 1);
+      },
+    });
+
+    // separate loop to . Could live in another client
+    store.subscribe(lastAction$(currentGameId), {
+      onUpdate: (action: any) => {
+        console.log('action updated', action);
+
+        const game = store.query(currentGame$());
+
+        // currentPlayer
+
+        console.log('next player', game?.currentPlayer);
+
+        if (game?.currentPlayer === 'player-2') {
+          agentTurn(store, currentGame, 'player-2', 'player-1');
+        }
       },
     });
   }
