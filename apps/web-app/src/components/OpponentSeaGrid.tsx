@@ -1,4 +1,3 @@
-import { isColliding } from '@battleship/domain';
 import {
   allMissiles$,
   currentGame$,
@@ -10,54 +9,10 @@ import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { stringifyCoordinates } from '@/util/coordinates';
 import { useGameState } from './GameStateProvider';
+import { MissileDisplay } from './MissileDisplay';
 import { type CellPixelSize, SeaGrid } from './SeaGrid';
 
 type Cell = { x: number; y: number };
-
-interface MissileCrossProps {
-  id: string;
-  left: number;
-  top: number;
-  size?: number;
-  thickness?: number;
-  color?: string;
-}
-
-const MissileCross: React.FC<MissileCrossProps> = ({
-  id,
-  left,
-  top,
-  size = 14,
-  thickness = 2,
-  color = '#991b1b',
-}) => (
-  <div key={`missile-cross-${id}`} className="absolute z-10 pointer-events-none">
-    <div
-      style={{
-        position: 'absolute',
-        left,
-        top,
-        width: size,
-        height: thickness,
-        backgroundColor: color,
-        transform: 'rotate(45deg)',
-        transformOrigin: 'center',
-      }}
-    />
-    <div
-      style={{
-        position: 'absolute',
-        left,
-        top,
-        width: size,
-        height: thickness,
-        backgroundColor: color,
-        transform: 'rotate(-45deg)',
-        transformOrigin: 'center',
-      }}
-    />
-  </div>
-);
 
 export const OpponentSeaGrid = ({ player }: { player: string }) => {
   const [hoverCell, setHoverCell] = useState<Cell | null>(null);
@@ -156,62 +111,11 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                 }}
                 aria-label="opponent grid overlay"
               />
-              {(missileResults ?? []).map((m) => {
-                // Check if missile collides with any opponent ship
-                const missileAsSeaObject = {
-                  id: m.id,
-                  x: m.x,
-                  y: m.y,
-                  length: 1,
-                  orientation: 0 as const,
-                  player: m.player,
-                };
-                const collisionPoint = isColliding(missileAsSeaObject, [...(opponentShips ?? [])]);
-                const isHit = !!collisionPoint;
-
-                if (isHit) {
-                  const size = 14;
-                  const thickness = 2;
-                  const leftCross =
-                    m.x * (cellPixelSize.width + cellPixelSize.gapX) +
-                    (cellPixelSize.width - size) / 2;
-                  const topCross =
-                    m.y * (cellPixelSize.height + cellPixelSize.gapY) +
-                    (cellPixelSize.height - thickness) / 2;
-                  return (
-                    <MissileCross
-                      key={`missile-cross-${m.id}`}
-                      id={m.id}
-                      left={leftCross}
-                      top={topCross}
-                      size={size}
-                      thickness={thickness}
-                    />
-                  );
-                }
-                const dotSize = 10;
-                const mLeft =
-                  m.x * (cellPixelSize.width + cellPixelSize.gapX) +
-                  (cellPixelSize.width - dotSize) / 2;
-                const mTop =
-                  m.y * (cellPixelSize.height + cellPixelSize.gapY) +
-                  (cellPixelSize.height - dotSize) / 2;
-                return (
-                  <div
-                    key={`missile-dot-${m.id}`}
-                    className="absolute z-10 pointer-events-none"
-                    style={{
-                      left: mLeft,
-                      top: mTop,
-                      width: dotSize,
-                      height: dotSize,
-                      borderRadius: '9999px',
-                      backgroundColor: '#1e3a8a',
-                      boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
-                    }}
-                  />
-                );
-              })}
+              <MissileDisplay
+                missileResults={missileResults ?? []}
+                ships={opponentShips ?? []}
+                cellPixelSize={cellPixelSize}
+              />
               {hoverCell && (
                 <div
                   className="absolute z-10 bg-blue-400/40 border border-blue-500 pointer-events-none"

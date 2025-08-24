@@ -1,11 +1,14 @@
 import { isColliding } from '@battleship/domain';
 import { tables } from '@battleship/schema';
+import { missileResults$ } from '@battleship/schema/queries';
 import { SnapModifier } from '@dnd-kit/abstract/modifiers';
 import { RestrictToElement } from '@dnd-kit/dom/modifiers';
 import { type DragDropEvents, useDraggable } from '@dnd-kit/react';
-import { useClientDocument } from '@livestore/react';
+import { useClientDocument, useStore } from '@livestore/react';
 import type React from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { useGameState } from './GameStateProvider';
+import { MissileDisplay } from './MissileDisplay';
 import { type CellPixelSize, SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
 
 const DraggableShip: React.FC<{
@@ -60,9 +63,14 @@ const DraggableShip: React.FC<{
 };
 
 export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
-  const [{ myShips }, setState] = useClientDocument(tables.uiState);
+  const [{ myShips, opponent }, setState] = useClientDocument(tables.uiState);
+  const { store } = useStore();
+  const { currentGameId } = useGameState();
 
   const latestCellPixelSize = useRef<CellPixelSize>({ width: 0, height: 0, gapX: 0, gapY: 0 });
+
+  const opponentMissileResults =
+    !currentGameId || !opponent ? [] : store.useQuery(missileResults$(currentGameId, opponent));
 
   const onDragEnd = useCallback<DragDropEvents['dragend']>(
     (event) => {
@@ -119,6 +127,11 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
                 gridElement={gridRef.current}
               />
             ))}
+            <MissileDisplay
+              missileResults={opponentMissileResults}
+              ships={myShips}
+              cellPixelSize={cellPixelSize}
+            />
           </>
         );
       }}
