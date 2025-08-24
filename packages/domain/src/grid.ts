@@ -46,3 +46,32 @@ export const createInitialShips = ({
     return acc;
   }, []);
 };
+
+/**
+ * Server as fallback strategy that find a empty target
+ *
+ * TODO: Decouple filtering and strategy
+ *
+ * @param gridSize - Size of the grid
+ * @param firedCoordinates - Set of already fired coordinate strings
+ * @returns Random available coordinate or null if none available
+ */
+export const pickEmptyTarget = ({
+  rowSize,
+  colSize,
+  firedCoordinates,
+}: {
+  rowSize: number;
+  colSize: number;
+  firedCoordinates: Set<string>;
+}) => {
+  const availableCoordinates = Array.from({ length: rowSize }, (_, x) =>
+    Array.from({ length: colSize }, (_, y) => ({ x, y }))
+  )
+    .flat()
+    .filter((coord) => !firedCoordinates.has(`${coord.x},${coord.y}`));
+
+  return availableCoordinates.length === 0
+    ? null
+    : availableCoordinates[Math.floor(Math.random() * availableCoordinates.length)];
+};
