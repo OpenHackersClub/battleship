@@ -1,7 +1,7 @@
 import { makeAdapter } from '@livestore/adapter-node';
 import { createStorePromise, queryDb } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
-import { GAME_CONFIG, isColliding, pickEmptyTarget, getMissileHitPosition, convertMissileToSeaObject } from '@battleship/domain';
+import { GAME_CONFIG, isColliding, pickEmptyTarget, getMissileHitPosition } from '@battleship/domain';
 
 import { events, schema, tables } from '@battleship/schema';
 
