@@ -1,18 +1,5 @@
+import { MISSILE_CONSTANTS } from '@battleship/domain';
 import { type CellPixelSize, calculateCellPosition } from './coordinates';
-
-// Missile visualization constants
-export const MISSILE_CONSTANTS = {
-  CROSS: {
-    SIZE: 14,
-    THICKNESS: 2,
-    COLOR: '#991b1b',
-  },
-  DOT: {
-    SIZE: 10,
-    COLOR: '#1e3a8a',
-    SHADOW: '0 0 0 1px rgba(0,0,0,0.2)',
-  },
-} as const;
 
 export type MissileVisualProps = {
   x: number;

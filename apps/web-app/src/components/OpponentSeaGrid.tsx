@@ -3,17 +3,14 @@ import { events, tables } from '../schema/schema';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useGridInteraction } from '@/hooks/useGridInteraction';
-import { useMissileHitDetection } from '@/hooks/useMissileHitDetection';
 import { type CellPixelSize, stringifyCoordinates } from '@/util/coordinates';
-import { calculateMissileCrossPosition, calculateMissileDotPosition } from '@/util/missile-utils';
 import { useGameState } from './GameStateProvider';
 import { HoverCell } from './HoverCell';
-import { MissileCross, MissileDot } from './MissileVisuals';
+import { MissileRenderer } from './MissileRenderer';
 import { SeaGrid } from './SeaGrid';
 
 export const OpponentSeaGrid = ({ player }: { player: string }) => {
   const { store } = useStore();
-  const { checkMissileHit } = useMissileHitDetection();
   const { hoverCell, createMouseMoveHandler, handleMouseLeave, createClickHandler } =
     useGridInteraction();
 
@@ -75,27 +72,11 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                 }}
                 aria-label="opponent grid overlay"
               />
-              {(missileResults ?? []).map((m) => {
-                const isHit = checkMissileHit(m, opponentShips ?? []);
-
-                if (isHit) {
-                  const { left, top } = calculateMissileCrossPosition({
-                    x: m.x,
-                    y: m.y,
-                    cellPixelSize,
-                  });
-                  return (
-                    <MissileCross key={`missile-cross-${m.id}`} id={m.id} left={left} top={top} />
-                  );
-                }
-
-                const { left, top } = calculateMissileDotPosition({
-                  x: m.x,
-                  y: m.y,
-                  cellPixelSize,
-                });
-                return <MissileDot key={`missile-dot-${m.id}`} id={m.id} left={left} top={top} />;
-              })}
+              <MissileRenderer
+                missileResults={missileResults ?? []}
+                ships={opponentShips ?? []}
+                cellPixelSize={cellPixelSize}
+              />
               <HoverCell cell={hoverCell} cellPixelSize={cellPixelSize} />
             </>
           );

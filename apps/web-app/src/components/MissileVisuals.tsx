@@ -1,5 +1,5 @@
 import type React from 'react';
-import { MISSILE_CONSTANTS } from '@/util/missile-utils';
+import { MISSILE_CONSTANTS } from '@battleship/domain';
 
 interface MissileCrossProps {
   id: string;

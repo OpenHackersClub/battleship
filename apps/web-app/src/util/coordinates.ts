@@ -1,3 +1,4 @@
+import { GRID_CONSTANTS } from '@battleship/domain';
 import { stringifyCoordinates as stringifyCoordinatesFromSchema } from '@battleship/schema/utils';
 
 export const stringifyCoordinates = stringifyCoordinatesFromSchema;
@@ -38,8 +39,8 @@ export const computeCellFromMouseEvent = (
   event: React.MouseEvent<Element>,
   gridElement: HTMLDivElement | null,
   cellPixelSize: CellPixelSize,
-  cols = 10,
-  rows = 10
+  cols = GRID_CONSTANTS.DEFAULT_COLS,
+  rows = GRID_CONSTANTS.DEFAULT_ROWS
 ): { x: number; y: number } | null => {
   if (!gridElement) return null;
   const rect = gridElement.getBoundingClientRect();
