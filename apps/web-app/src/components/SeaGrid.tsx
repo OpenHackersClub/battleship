@@ -1,6 +1,7 @@
 import { type DragDropEvents, DragDropProvider } from '@dnd-kit/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { GAME_CONFIG } from './GameStateProvider';
+import type { CellPixelSize } from '@/util/coordinates';
 
 // Using Tailwind CSS default color classes
 export const SHIP_COLOR_CLASSES = [
@@ -36,13 +37,6 @@ const Grid = React.forwardRef<
     </div>
   );
 });
-
-export type CellPixelSize = {
-  width: number;
-  height: number;
-  gapX: number;
-  gapY: number;
-};
 
 type SeaGridChildrenArg = {
   cellPixelSize: CellPixelSize;

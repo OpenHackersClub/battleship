@@ -6,6 +6,7 @@ import { GAME_CONFIG, isColliding, pickEmptyTarget } from '@battleship/domain';
 import { events, schema, tables } from '@battleship/schema';
 
 import {
+  allGames$,
   currentGame$,
   missiles$,
   opponentShips$,
@@ -16,11 +17,6 @@ import {
 
 const LIVESTORE_SYNC_URL = 'ws://localhost:8787';
 
-export const allGames$ = () =>
-  queryDb(tables.games.orderBy('createdAt', 'desc'), {
-    deps: [],
-    label: `game@all`,
-  });
 
 // TODO fix to use schema types
 /**
