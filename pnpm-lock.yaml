@@ -137,6 +137,12 @@ importers:
       '@battleship/schema':
         specifier: workspace:^
         version: link:../../packages/schema
+      '@dnd-kit/abstract':
+        specifier: ^0.1.21
+        version: 0.1.21
+      '@dnd-kit/dom':
+        specifier: ^0.1.21
+        version: 0.1.21
       '@dnd-kit/helpers':
         specifier: ^0.1.21
         version: 0.1.21

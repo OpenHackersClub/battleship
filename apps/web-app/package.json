@@ -7,6 +7,8 @@
     "@battleship/domain": "workspace:^",
     "@battleship/schema": "workspace:^",
     "@dnd-kit/helpers": "^0.1.21",
+    "@dnd-kit/abstract": "^0.1.21",
+    "@dnd-kit/dom": "^0.1.21",
     "@dnd-kit/react": "^0.1.21",
     "@livestore/adapter-web": "0.3.1",
     "@livestore/livestore": "0.3.1",
