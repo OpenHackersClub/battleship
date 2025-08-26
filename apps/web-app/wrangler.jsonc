@@ -1,0 +1,9 @@
+{
+  "name": "battleship-webapp",
+  "compatibility_date": "2024-08-26",
+  "env": {
+    "production": {
+      "pages_build_output_dir": "// This is automatically set by Cloudflare Pages"
+    }
+  }
+}
