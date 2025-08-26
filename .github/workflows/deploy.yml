@@ -5,18 +5,13 @@ on:
     branches:
       - main
       - deployment
-    paths:
-      - 'apps/server-client/**'
-      - 'apps/web-app/**'
-      - 'apps/cf-worker/**'
-      - 'packages/**'
+
   workflow_dispatch:
 
 jobs:
   deploy-server-client:
     runs-on: ubuntu-latest
     name: Deploy Server Client to Render
-    if: contains(github.event.head_commit.modified, 'apps/server-client') || contains(github.event.head_commit.added, 'apps/server-client') || contains(github.event.head_commit.modified, 'packages') || contains(github.event.head_commit.added, 'packages') || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout
@@ -49,7 +44,6 @@ jobs:
   deploy-webapp:
     runs-on: ubuntu-latest
     name: Deploy Webapp to Cloudflare Pages
-    if: contains(github.event.head_commit.modified, 'apps/web-app') || contains(github.event.head_commit.added, 'apps/web-app') || contains(github.event.head_commit.modified, 'packages') || contains(github.event.head_commit.added, 'packages') || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout
@@ -82,7 +76,6 @@ jobs:
   deploy-cf-worker:
     runs-on: ubuntu-latest
     name: Deploy Cloudflare Worker
-    if: contains(github.event.head_commit.modified, 'apps/cf-worker') || contains(github.event.head_commit.added, 'apps/cf-worker') || contains(github.event.head_commit.modified, 'packages') || contains(github.event.head_commit.added, 'packages') || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout
