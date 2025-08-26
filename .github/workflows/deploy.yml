@@ -36,9 +36,9 @@ jobs:
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
-        working-directory: apps/web-app
         with:
           wranglerVersion: "4.26.0"
+          workingDirectory: apps/web-app
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=battleship-webapp
