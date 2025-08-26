@@ -29,3 +29,5 @@ export const calculateShipDimensions = (
       ? length * cellPixelSize.height + (length - 1) * cellPixelSize.gapY
       : cellPixelSize.height,
 });
+
+export const stringifyCoordinates = (x: number, y: number) => `[${x},${y}]`;

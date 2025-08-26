@@ -1,12 +1,17 @@
-import { missileResults$, opponentShips$ } from '@battleship/schema/queries';
-import { events, tables } from '../schema/schema';
+import { stringifyCoordinates } from '@battleship/domain';
+import {
+  allMissiles$,
+  currentGame$,
+  missileResults$,
+  opponentShips$,
+} from '@battleship/schema/queries';
+import { events, tables } from '@battleship/schema';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useGridInteraction } from '@/hooks/useGridInteraction';
-import { type CellPixelSize, stringifyCoordinates } from '@/util/coordinates';
+import type { CellPixelSize } from '@/util/coordinates';
 import { useGameState } from './GameStateProvider';
 import { HoverCell } from './HoverCell';
-import { MissileRenderer } from './MissileRenderer';
 import { SeaGrid } from './SeaGrid';
 
 export const OpponentSeaGrid = ({ player }: { player: string }) => {
@@ -34,7 +39,7 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
 
   return (
     <>
-      <SeaGrid player={player}>
+      <SeaGrid player={player} missileResults={missileResults ?? []} ships={opponentShips ?? []}>
         {({ cellPixelSize, gridRef }) => {
           const handleMouseMove = createMouseMoveHandler(gridRef, cellPixelSize);
 
@@ -71,11 +76,6 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
                   }
                 }}
                 aria-label="opponent grid overlay"
-              />
-              <MissileRenderer
-                missileResults={missileResults ?? []}
-                ships={opponentShips ?? []}
-                cellPixelSize={cellPixelSize}
               />
               <HoverCell cell={hoverCell} cellPixelSize={cellPixelSize} />
             </>

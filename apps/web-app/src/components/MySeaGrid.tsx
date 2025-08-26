@@ -14,7 +14,6 @@ import {
   getCellStep,
 } from '@/util/coordinates';
 import { useGameState } from './GameStateProvider';
-import { MissileDisplay } from './MissileDisplay';
 import { SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
 
 const DraggableShip: React.FC<{
@@ -107,7 +106,12 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
   );
 
   return (
-    <SeaGrid player={player} onDragEnd={onDragEnd}>
+    <SeaGrid
+      player={player}
+      onDragEnd={onDragEnd}
+      missileResults={opponentMissileResults}
+      ships={myShips}
+    >
       {({ cellPixelSize, gridRef }) => {
         latestCellPixelSize.current = cellPixelSize;
         return (
@@ -125,11 +129,6 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
                 gridElement={gridRef.current}
               />
             ))}
-            <MissileDisplay
-              missileResults={opponentMissileResults}
-              ships={myShips}
-              cellPixelSize={cellPixelSize}
-            />
           </>
         );
       }}

@@ -1,9 +1,16 @@
-import { GRID_CONSTANTS, getCellStep, type CellPixelSize } from '@battleship/domain';
-import { stringifyCoordinates as stringifyCoordinatesFromSchema } from '@battleship/schema/utils';
+import {
+  type CellPixelSize,
+  GRID_CONSTANTS,
+  getCellStep,
+  stringifyCoordinates,
+} from '@battleship/domain';
 
-export const stringifyCoordinates = stringifyCoordinatesFromSchema;
-
-export { type CellPixelSize, calculateCellPosition, getCellStep, calculateShipDimensions } from '@battleship/domain';
+export {
+  type CellPixelSize,
+  calculateCellPosition,
+  calculateShipDimensions,
+  getCellStep,
+} from '@battleship/domain';
 
 export const computeCellFromMouseEvent = (
   event: React.MouseEvent<Element>,
