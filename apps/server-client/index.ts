@@ -1,7 +1,7 @@
 import { makeAdapter } from '@livestore/adapter-node';
 import { createStorePromise, queryDb } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
-import { isColliding, pickEmptyTarget } from '@battleship/domain';
+import { GAME_CONFIG, isColliding, pickEmptyTarget } from '@battleship/domain';
 
 import { events, schema, tables } from '@battleship/schema';
 
@@ -102,8 +102,8 @@ const agentTurn = (store: any, currentGame: any, myPlayer: string, opponentPlaye
   console.log('Already fired at:', firedCoordinates.size, 'locations');
 
   const targetCell = pickEmptyTarget({
-    rowSize: 10,
-    colSize: 10,
+    rowSize: GAME_CONFIG.rowSize,
+    colSize: GAME_CONFIG.colSize,
     firedCoordinates,
   });
 

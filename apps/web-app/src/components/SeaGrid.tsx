@@ -1,5 +1,6 @@
 import { type DragDropEvents, DragDropProvider } from '@dnd-kit/react';
 import React, { useEffect, useRef, useState } from 'react';
+import { GAME_CONFIG } from './GameStateProvider';
 
 // Using Tailwind CSS default color classes
 export const SHIP_COLOR_CLASSES = [
@@ -59,8 +60,8 @@ type SeaGridProps = {
 
 export const SeaGrid: React.FC<SeaGridProps> = ({
   player: _player,
-  rowSize: rowSizeProp = 10,
-  colSize: colSizeProp = 10,
+  rowSize: rowSizeProp = GAME_CONFIG.rowSize,
+  colSize: colSizeProp = GAME_CONFIG.colSize,
   className,
   onDragEnd,
   children,

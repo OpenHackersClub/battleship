@@ -7,7 +7,7 @@ export const createInitialShips = ({
   player,
   colSize,
   rowSize,
-  shipCount = 5,
+  shipCount = 3,
 }: {
   player: string;
   colSize: number;
@@ -24,7 +24,7 @@ export const createInitialShips = ({
     const orientation = Math.random() < 0.5 ? 0 : 90;
     const baseship: Ship = {
       id: crypto.randomUUID(),
-      length: i + 1,
+      length: Math.min(i + 1, 3),
       x: 0,
       y: 0,
       player,
