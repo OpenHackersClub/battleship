@@ -1,0 +1,114 @@
+name: Deploy Applications
+
+on:
+  push:
+    branches:
+      - main
+      - deployment
+    paths:
+      - 'apps/server-client/**'
+      - 'apps/web-app/**'
+      - 'apps/cf-worker/**'
+      - 'packages/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-server-client:
+    runs-on: ubuntu-latest
+    name: Deploy Server Client to Render
+    if: contains(github.event.head_commit.modified, 'apps/server-client') || contains(github.event.head_commit.added, 'apps/server-client') || contains(github.event.head_commit.modified, 'packages') || contains(github.event.head_commit.added, 'packages') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.7.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build server-client
+        run: pnpm --filter server-client build
+
+      - name: Deploy to Render
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
+
+  deploy-webapp:
+    runs-on: ubuntu-latest
+    name: Deploy Webapp to Cloudflare Pages
+    if: contains(github.event.head_commit.modified, 'apps/web-app') || contains(github.event.head_commit.added, 'apps/web-app') || contains(github.event.head_commit.modified, 'packages') || contains(github.event.head_commit.added, 'packages') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.7.1
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23'
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Build webapp
+        run: pnpm --filter webapp build
+      
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/web-app/dist --project-name=battleship-webapp
+
+  deploy-cf-worker:
+    runs-on: ubuntu-latest
+    name: Deploy Cloudflare Worker
+    if: contains(github.event.head_commit.modified, 'apps/cf-worker') || contains(github.event.head_commit.added, 'apps/cf-worker') || contains(github.event.head_commit.modified, 'packages') || contains(github.event.head_commit.added, 'packages') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.7.1
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23'
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Build cf-worker
+        run: pnpm --filter cf-worker build
+      
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: 'apps/cf-worker'
+          command: deploy
