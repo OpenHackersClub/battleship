@@ -32,7 +32,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       
       - name: Build webapp
-        run: pnpm --filter webapp build
+        run: pnpm exec turbo build --filter=webapp
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
