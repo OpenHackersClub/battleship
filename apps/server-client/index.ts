@@ -254,7 +254,8 @@ const main = async () => {
          *
          */
 
-        // workaround issue: commiting at next tick (0.3.1): error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
+        // workaround issue https://github.com/livestorejs/livestore/issues/577 by commiting at next tick
+        // error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
         setTimeout(() => {
           // Fire either MissileHit or MissileMiss event based on collision result
           store.commit(
