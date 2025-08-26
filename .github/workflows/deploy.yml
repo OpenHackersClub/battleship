@@ -9,20 +9,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-server-client:
-    runs-on: ubuntu-latest
-    name: Deploy Server Client to Render
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy to Render using render.yaml
-        uses: renderinc/deploy-action@v1.0.0
-        with:
-          render-token: ${{ secrets.RENDER_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
   deploy-webapp:
     runs-on: ubuntu-latest
     name: Deploy Webapp to Cloudflare Pages
