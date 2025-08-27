@@ -9,19 +9,23 @@ import { Footer } from './components/Footer';
 import { GameStateProvider } from './components/GameStateProvider';
 import { Header } from './components/Header';
 import { MainSection } from './components/MainSection';
+import { Sidebar } from './components/Sidebar';
 import LiveStoreWorker from './livestore.worker?worker';
 import { getStoreId } from './util/store-id';
 
 const AppBody: React.FC = () => (
-  <section className="container p-6">
-    <GameStateProvider>
-      <Header />
-      <MainSection />
-      <Footer />
-    </GameStateProvider>
-
-    <Footer />
-  </section>
+  <div className="flex h-screen">
+    <Sidebar />
+    <div className="flex-1 flex flex-col">
+      <section className="container p-6 flex-1">
+        <GameStateProvider>
+          <Header />
+          <MainSection />
+          <Footer />
+        </GameStateProvider>
+      </section>
+    </div>
+  </div>
 );
 
 const storeId = getStoreId();

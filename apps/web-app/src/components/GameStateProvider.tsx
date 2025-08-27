@@ -24,7 +24,7 @@ export function useGameState(): GameStateContextValue {
 export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const { store } = useStore();
 
-  const [{ currentGameId, myPlayer, opponent }, setState] = useClientDocument(tables.uiState);
+  const [{ currentGameId, myPlayer, opponent, selectedItem }, setState] = useClientDocument(tables.uiState);
 
   const currentGame = useQuery(currentGame$());
 
