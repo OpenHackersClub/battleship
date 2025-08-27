@@ -1,10 +1,5 @@
-import {
-  allMissiles$,
-  currentGame$,
-  missileResults$,
-  opponentShips$,
-} from '@battleship/schema/queries';
-import { events, tables } from '@battleship/schema/schema';
+import { missileResults$, opponentShips$ } from '@battleship/schema/queries';
+import { events, tables } from '../schema/schema';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { stringifyCoordinates } from '@/util/coordinates';

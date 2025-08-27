@@ -1,6 +1,6 @@
 import { createInitialShips, GAME_CONFIG, type Ship } from '@battleship/domain';
 import { currentGame$ } from '@battleship/schema/queries';
-import { events, tables } from '@battleship/schema/schema';
+import { events, tables } from '../schema/schema';
 import { queryDb } from '@livestore/livestore';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
