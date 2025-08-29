@@ -5,12 +5,11 @@ import {
   missileResults$,
   opponentShips$,
 } from '@battleship/schema/queries';
-import { tables } from '../schema/schema';
-
 import { useDragDropMonitor } from '@dnd-kit/react';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { tables } from '../schema/schema';
 import { MySeaGrid } from './MySeaGrid';
 import { OpponentSeaGrid } from './OpponentSeaGrid';
 import { ShipDisplay } from './ShipDisplay';

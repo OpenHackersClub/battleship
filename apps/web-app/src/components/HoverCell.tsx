@@ -10,7 +10,7 @@ interface HoverCellProps {
 export const HoverCell: React.FC<HoverCellProps> = ({
   cell,
   cellPixelSize,
-  className = 'absolute z-10 bg-blue-400/40 border border-blue-500 pointer-events-none',
+  className = 'absolute bg-blue-400/40 border border-blue-500 pointer-events-none',
 }) => {
   if (!cell) return null;
 

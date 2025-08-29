@@ -1,4 +1,5 @@
 import { currentGame$, tables } from '@battleship/schema';
+import { allMissiles$ } from '@battleship/schema/queries';
 import { queryDb } from '@livestore/livestore';
 import { useQuery, useStore } from '@livestore/react';
 import type React from 'react';
@@ -15,11 +16,7 @@ export const Header: React.FC = () => {
 
   const { currentGameId, newGame } = useGameState();
 
-  const missiles$ = useMemo(
-    () => queryDb(tables.missiles.select(), { label: 'missiles-header' }),
-    []
-  );
-  const missiles = store.useQuery(missiles$);
+  const missiles = store.useQuery(allMissiles$(currentGameId ?? ''));
 
   const handleStartNewGame = () => {
     newGame();
@@ -70,7 +67,7 @@ export const Header: React.FC = () => {
 
       <Alert className="mt-4 mb-4 text-center">
         <AlertDescription>
-          Click on your grid to place ships, click on enemy waters to fire missiles!
+          1. Drag & Drop your ships 2. Start 3. Click on enemy waters to fire missiles!
         </AlertDescription>
       </Alert>
     </header>

@@ -1,12 +1,11 @@
 import { makeAdapter } from '@livestore/adapter-node';
 import { createStorePromise, queryDb } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
-import { GAME_CONFIG, isColliding, pickEmptyTarget, getMissileHitPosition } from '@battleship/domain';
+import { GAME_CONFIG, pickEmptyTarget, getMissileHitPosition } from '@battleship/domain';
 
 import { events, schema, tables } from '@battleship/schema';
 
 import {
-  allGames$,
   currentGame$,
   missiles$,
   opponentShips$,
@@ -16,7 +15,6 @@ import {
 } from '@battleship/schema/queries';
 
 const LIVESTORE_SYNC_URL = 'ws://localhost:8787';
-
 
 // TODO fix to use schema types
 /**

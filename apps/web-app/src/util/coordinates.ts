@@ -1,9 +1,4 @@
-import {
-  type CellPixelSize,
-  GRID_CONSTANTS,
-  getCellStep,
-  stringifyCoordinates,
-} from '@battleship/domain';
+import { type CellPixelSize, GRID_CONSTANTS, getCellStep } from '@battleship/domain';
 
 export {
   type CellPixelSize,

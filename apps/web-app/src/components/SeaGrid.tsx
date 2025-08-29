@@ -1,9 +1,9 @@
 import type { MissileResult, Ship } from '@battleship/domain';
 import { type DragDropEvents, DragDropProvider } from '@dnd-kit/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { GAME_CONFIG } from './GameStateProvider';
 import { useMissileHitDetection } from '@/hooks/useMissileHitDetection';
 import type { CellPixelSize } from '@/util/coordinates';
+import { GAME_CONFIG } from './GameStateProvider';
 import { MissileCellCross, MissileCellDot } from './MissileVisuals';
 
 // Using Tailwind CSS default color classes
@@ -46,9 +46,10 @@ const Grid = React.forwardRef<
         const isHit = missile ? checkMissileHit(missile, ships) : false;
 
         return (
-          <div
+          <button
             key={`cell-${x}-${y}`}
-            className="aspect-square border border-blue-200 bg-blue-100 relative flex items-center justify-center cursor-pointer hover:bg-blue-400/40 hover:border-blue-500"
+            type="button"
+            className="aspect-square border border-blue-200 bg-blue-100 relative flex items-center justify-center cursor-pointer hover:bg-blue-400/40 hover:border-blue-500 z-"
             onClick={() => onCellClick?.(x, y)}
           >
             {missile &&
@@ -57,11 +58,13 @@ const Grid = React.forwardRef<
               ) : (
                 <MissileCellDot id={missile.id} x={missile.x} y={missile.y} inline={true} />
               ))}
-          </div>
+          </button>
         );
       })}
-      {/* Overlay for draggable items using the same grid structure */}
-      <div className={`absolute inset-0 grid ${gridColsClass} gap-2`}>{children}</div>
+      {/* Overlay for draggable items using the same grid structure. No overlay if clickable */}
+      {!onCellClick && (
+        <div className={`absolute inset-0 grid ${gridColsClass} gap-2 z-10`}>{children}</div>
+      )}
     </div>
   );
 });
@@ -80,6 +83,7 @@ type SeaGridProps = {
   children?: React.ReactNode | ((arg: SeaGridChildrenArg) => React.ReactNode);
   missileResults?: MissileResult[];
   ships?: Ship[];
+  onCellClick?: (x: number, y: number) => void;
 };
 
 export const SeaGrid: React.FC<SeaGridProps> = ({
@@ -91,6 +95,7 @@ export const SeaGrid: React.FC<SeaGridProps> = ({
   children,
   missileResults,
   ships,
+  onCellClick,
 }) => {
   const [rowSize, _setRowSize] = useState(rowSizeProp);
   const [colSize, _setColSize] = useState(colSizeProp);
@@ -143,6 +148,7 @@ export const SeaGrid: React.FC<SeaGridProps> = ({
             colSize={colSize}
             missileResults={missileResults}
             ships={ships}
+            onCellClick={onCellClick}
           >
             {renderedChildren}
           </Grid>

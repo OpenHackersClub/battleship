@@ -1,6 +1,6 @@
-import { schema } from './schema/schema';
 import { makeWorker } from '@livestore/adapter-web/worker';
 import { makeCfSync } from '@livestore/sync-cf';
+import { schema } from './schema/schema';
 
 makeWorker({
   schema,

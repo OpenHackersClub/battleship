@@ -67,8 +67,10 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
 
   const latestCellPixelSize = useRef<CellPixelSize>({ width: 0, height: 0, gapX: 0, gapY: 0 });
 
-  const opponentMissileResults =
-    !currentGameId || !opponent ? [] : store.useQuery(missileResults$(currentGameId, opponent));
+  const opponentMissileResults = store.useQuery(
+    missileResults$(currentGameId || '', opponent || '')
+  );
+  const filteredOpponentMissileResults = !currentGameId || !opponent ? [] : opponentMissileResults;
 
   const onDragEnd = useCallback<DragDropEvents['dragend']>(
     (event) => {
@@ -109,7 +111,7 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
     <SeaGrid
       player={player}
       onDragEnd={onDragEnd}
-      missileResults={opponentMissileResults}
+      missileResults={filteredOpponentMissileResults}
       ships={myShips}
     >
       {({ cellPixelSize, gridRef }) => {
