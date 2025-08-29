@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
-import { cloudflare } from '@cloudflare/vite-plugin'
+import { cloudflare } from '@cloudflare/vite-plugin';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [...cloudflare()],
@@ -8,12 +8,12 @@ export default defineConfig({
       entry: './src/sync-worker.ts',
       name: 'cf-worker',
       fileName: 'index',
-      formats: ['es']
+      formats: ['es'],
     },
     rollupOptions: {
       external: [],
     },
     outDir: 'dist',
-    emptyOutDir: true
-  }
-})
+    emptyOutDir: true,
+  },
+});

@@ -3,3 +3,6 @@ export * from './collision';
 export * from './gameConfig';
 export * from './grid';
 export * from './winCondition';
+export * from './types';
+export * from './missile-processing';
+export * from './coordinates';

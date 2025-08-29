@@ -1,7 +1,7 @@
 import { makeAdapter } from '@livestore/adapter-node';
 import { createStorePromise, queryDb } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
-import { GAME_CONFIG, isColliding, pickEmptyTarget } from '@battleship/domain';
+import { GAME_CONFIG, pickEmptyTarget, getMissileHitPosition } from '@battleship/domain';
 
 import { events, schema, tables } from '@battleship/schema';
 
@@ -15,12 +15,6 @@ import {
 } from '@battleship/schema/queries';
 
 const LIVESTORE_SYNC_URL = 'ws://localhost:8787';
-
-export const allGames$ = () =>
-  queryDb(tables.games.orderBy('createdAt', 'desc'), {
-    deps: [],
-    label: `game@all`,
-  });
 
 // TODO fix to use schema types
 /**
@@ -42,18 +36,8 @@ const processMissile = (
   // Get opponent ships to check for collision
   const opponentShips = opponentPlayer ? store.query(opponentShips$(gameId, opponentPlayer)) : [];
 
-  // Create missile as SeaObject for collision detection
-  const missileSeaObject = {
-    id: missile.id,
-    x: missile.x,
-    y: missile.y,
-    length: 1, // missiles always have length 1
-    orientation: 0 as const, // missiles always have orientation 0
-    player: missile.player,
-  };
-
-  // Check for collision using the isColliding function
-  const hitPosition = isColliding(missileSeaObject, opponentShips || []);
+  // Check for collision using shared missile processing utilities
+  const hitPosition = getMissileHitPosition(missile, opponentShips || []);
   const isHit = hitPosition !== undefined;
 
   console.log('Collision check:', isHit ? 'HIT!' : 'MISS', 'at position', hitPosition);

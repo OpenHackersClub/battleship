@@ -13,15 +13,17 @@ import LiveStoreWorker from './livestore.worker?worker';
 import { getStoreId } from './util/store-id';
 
 const AppBody: React.FC = () => (
-  <section className="container p-6">
-    <GameStateProvider>
-      <Header />
-      <MainSection />
-      <Footer />
-    </GameStateProvider>
-
-    <Footer />
-  </section>
+  <div className="flex h-screen">
+    <div className="flex-1 flex flex-col">
+      <section className="container p-6 flex-1">
+        <GameStateProvider>
+          <Header />
+          <MainSection />
+          <Footer />
+        </GameStateProvider>
+      </section>
+    </div>
+  </div>
 );
 
 const storeId = getStoreId();

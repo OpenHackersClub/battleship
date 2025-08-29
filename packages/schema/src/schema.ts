@@ -127,7 +127,13 @@ export const tables = {
     }),
     default: {
       id: SessionIdSymbol,
-      value: { currentGameId: '', myPlayer: '', opponent: '', winner: undefined, myShips: [] },
+      value: {
+        currentGameId: '',
+        myPlayer: '',
+        opponent: '',
+        winner: undefined,
+        myShips: [],
+      },
     },
   }),
 } as const;

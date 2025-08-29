@@ -6,10 +6,15 @@ import { RestrictToElement } from '@dnd-kit/dom/modifiers';
 import { type DragDropEvents, useDraggable } from '@dnd-kit/react';
 import { useClientDocument, useStore } from '@livestore/react';
 import type React from 'react';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useRef } from 'react';
+import {
+  type CellPixelSize,
+  calculateCellPosition,
+  calculateShipDimensions,
+  getCellStep,
+} from '@/util/coordinates';
 import { useGameState } from './GameStateProvider';
-import { MissileDisplay } from './MissileDisplay';
-import { type CellPixelSize, SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
+import { SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
 
 const DraggableShip: React.FC<{
   id: string;
@@ -21,29 +26,22 @@ const DraggableShip: React.FC<{
   cellPixelSize: CellPixelSize;
   gridElement: HTMLDivElement | null;
 }> = ({ id, idx, x, y, length, orientation, cellPixelSize, gridElement }) => {
+  const { stepX, stepY } = getCellStep(cellPixelSize);
   const { ref, isDragging } = useDraggable({
     id,
     modifiers: [
       SnapModifier.configure({
         size: {
-          x: cellPixelSize.width + cellPixelSize.gapX || 1,
-          y: cellPixelSize.height + cellPixelSize.gapY || 1,
+          x: stepX || 1,
+          y: stepY || 1,
         },
       }),
       RestrictToElement.configure({ element: gridElement }),
     ],
   });
 
-  const left = x * (cellPixelSize.width + cellPixelSize.gapX);
-  const top = y * (cellPixelSize.height + cellPixelSize.gapY);
-  const width =
-    orientation === 0
-      ? length * cellPixelSize.width + (length - 1) * cellPixelSize.gapX
-      : cellPixelSize.width;
-  const height =
-    orientation === 90
-      ? length * cellPixelSize.height + (length - 1) * cellPixelSize.gapY
-      : cellPixelSize.height;
+  const { left, top } = calculateCellPosition(x, y, cellPixelSize);
+  const { width, height } = calculateShipDimensions(length, orientation, cellPixelSize);
 
   return (
     <div
@@ -69,8 +67,10 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
 
   const latestCellPixelSize = useRef<CellPixelSize>({ width: 0, height: 0, gapX: 0, gapY: 0 });
 
-  const opponentMissileResults =
-    !currentGameId || !opponent ? [] : store.useQuery(missileResults$(currentGameId, opponent));
+  const opponentMissileResults = store.useQuery(
+    missileResults$(currentGameId || '', opponent || '')
+  );
+  const filteredOpponentMissileResults = !currentGameId || !opponent ? [] : opponentMissileResults;
 
   const onDragEnd = useCallback<DragDropEvents['dragend']>(
     (event) => {
@@ -81,8 +81,7 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
       if (!draggedShip) return;
 
       const cellPixelSize = latestCellPixelSize.current;
-      const pixelPerCellX = cellPixelSize.width + cellPixelSize.gapX;
-      const pixelPerCellY = cellPixelSize.height + cellPixelSize.gapY;
+      const { stepX: pixelPerCellX, stepY: pixelPerCellY } = getCellStep(cellPixelSize);
 
       const proposedX = Math.round(
         draggedShip.x + event.operation.transform.x / (pixelPerCellX || 1)
@@ -109,7 +108,12 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
   );
 
   return (
-    <SeaGrid player={player} onDragEnd={onDragEnd}>
+    <SeaGrid
+      player={player}
+      onDragEnd={onDragEnd}
+      missileResults={filteredOpponentMissileResults}
+      ships={myShips}
+    >
       {({ cellPixelSize, gridRef }) => {
         latestCellPixelSize.current = cellPixelSize;
         return (
@@ -127,11 +131,6 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
                 gridElement={gridRef.current}
               />
             ))}
-            <MissileDisplay
-              missileResults={opponentMissileResults}
-              ships={myShips}
-              cellPixelSize={cellPixelSize}
-            />
           </>
         );
       }}

@@ -1,9 +1,9 @@
 import { createInitialShips, GAME_CONFIG, type Ship } from '@battleship/domain';
 import { currentGame$ } from '@battleship/schema/queries';
-import { events, tables } from '../schema/schema';
 import { queryDb } from '@livestore/livestore';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
+import { events, tables } from '../schema/schema';
 
 // Re-export the shared game configuration
 export { GAME_CONFIG };
