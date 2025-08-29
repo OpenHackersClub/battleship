@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: battleship-server-client
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter server-client build
+    startCommand: pnpm --filter server-client start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    rootDir: .
+    healthCheckPath: /health
+    autoDeploy: true
+    branch: main

@@ -1,9 +1,12 @@
-import { createInitialShips, type Ship } from '@battleship/domain';
+import { createInitialShips, GAME_CONFIG, type Ship } from '@battleship/domain';
 import { currentGame$ } from '@battleship/schema/queries';
-import { events, tables } from '@battleship/schema/schema';
+import { events, tables } from '../schema/schema';
 import { queryDb } from '@livestore/livestore';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
+
+// Re-export the shared game configuration
+export { GAME_CONFIG };
 
 type GameStateContextValue = {
   currentGameId: string | undefined;
@@ -79,15 +82,17 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     if (playerShips.length > 0) return;
     const initialships: Ship[] = createInitialShips({
       player: myPlayer,
-      colSize: 10,
-      rowSize: 10,
+      colSize: GAME_CONFIG.colSize,
+      rowSize: GAME_CONFIG.rowSize,
+      shipCount: GAME_CONFIG.shipCount,
     });
 
     // TODO by agent / server
     const initialOpponentShips: Ship[] = createInitialShips({
       player: opponent,
-      colSize: 10,
-      rowSize: 10,
+      colSize: GAME_CONFIG.colSize,
+      rowSize: GAME_CONFIG.rowSize,
+      shipCount: GAME_CONFIG.shipCount,
     });
 
     store.commit(

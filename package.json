@@ -4,13 +4,16 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build",
+    "build:webapp": "turbo run --filter webapp build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "lint:fix": "turbo run lint:fix",
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
-    "deploy": "turbo run deploy"
+    "deploy": "turbo run deploy",
+    "deploy:webapp": "turbo run --filter webapp deploy",
+    "deploy:server-client": "turbo run --filter server-client deploy"
   },
   "devDependencies": {
     "turbo": "^2.5.6",

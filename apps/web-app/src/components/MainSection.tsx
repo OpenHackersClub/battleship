@@ -5,7 +5,7 @@ import {
   missileResults$,
   opponentShips$,
 } from '@battleship/schema/queries';
-import { tables } from '@battleship/schema/schema';
+import { tables } from '../schema/schema';
 
 import { useDragDropMonitor } from '@dnd-kit/react';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
