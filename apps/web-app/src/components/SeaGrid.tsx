@@ -23,8 +23,9 @@ const Grid = React.forwardRef<
     children: React.ReactNode;
     missileResults?: MissileResult[];
     ships?: Ship[];
+    onCellClick?: (x: number, y: number) => void;
   }
->(({ rowSize, colSize, children, missileResults = [], ships = [] }, ref) => {
+>(({ rowSize, colSize, children, missileResults = [], ships = [], onCellClick }, ref) => {
   // Generate grid column and row classes based on cellCount
   const gridColsClass = `grid-cols-${colSize}`;
   const { checkMissileHit } = useMissileHitDetection();
@@ -47,7 +48,8 @@ const Grid = React.forwardRef<
         return (
           <div
             key={`cell-${x}-${y}`}
-            className="aspect-square border border-blue-200 bg-blue-100 relative flex items-center justify-center"
+            className="aspect-square border border-blue-200 bg-blue-100 relative flex items-center justify-center cursor-pointer hover:bg-blue-400/40 hover:border-blue-500"
+            onClick={() => onCellClick?.(x, y)}
           >
             {missile &&
               (isHit ? (

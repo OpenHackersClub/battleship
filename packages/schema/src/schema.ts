@@ -124,22 +124,15 @@ export const tables = {
           length: Schema.Number,
         })
       ),
-      selectedItem: Schema.optional(Schema.Struct({
-        id: Schema.String,
-        type: Schema.Literal('folder', 'document'),
-        name: Schema.String,
-        path: Schema.optional(Schema.String),
-      })),
     }),
     default: {
       id: SessionIdSymbol,
-      value: { 
-        currentGameId: '', 
-        myPlayer: '', 
-        opponent: '', 
-        winner: undefined, 
+      value: {
+        currentGameId: '',
+        myPlayer: '',
+        opponent: '',
+        winner: undefined,
         myShips: [],
-        selectedItem: undefined 
       },
     },
   }),
