@@ -166,6 +166,7 @@ const main = async () => {
   await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
 
   let lastGameId = '';
+  let unsubscribeHandlers: (() => void)[] = [];
 
   store.subscribe(currentGame$(), {
     skipInitialRun: false,
@@ -180,6 +181,9 @@ const main = async () => {
       if (lastGameId === currentGame.id) {
         return;
       }
+
+      unsubscribeHandlers.map((unsubscribe) => unsubscribe?.());
+      unsubscribeHandlers = [];
       lastGameId = currentGame.id;
 
       const currentGameId = currentGame.id;
@@ -196,7 +200,7 @@ const main = async () => {
       );
 
       // Listen to MissileFired events for all players - moved outside Effect loop
-      store.subscribe(missiles$(currentGameId, myPlayer), {
+      const unsubscribeMissiles = store.subscribe(missiles$(currentGameId, myPlayer), {
         skipInitialRun: false,
         // Issue: when specified true, onUpdate effect not being trigger even aftewards
 
@@ -266,7 +270,7 @@ const main = async () => {
       });
 
       // separate loop to . Could live in another client
-      store.subscribe(lastAction$(currentGameId), {
+      const unsubscribeLastAction = store.subscribe(lastAction$(currentGameId), {
         onUpdate: (action: any) => {
           console.log('action updated', action);
 
@@ -281,6 +285,8 @@ const main = async () => {
           }
         },
       });
+
+      unsubscribeHandlers.push(unsubscribeMissiles, unsubscribeLastAction);
     },
   });
 };
