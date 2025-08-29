@@ -164,115 +164,125 @@ const main = async () => {
   });
 
   await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
-  // Get current game and setup event listeners
-  const currentGame = store.query(currentGame$());
 
-  console.log('Server Store Id:', store.storeId);
-  console.log('Current game:', currentGame);
+  let lastGameId = '';
 
-  // TODO unsubscribe listener when game change
+  store.subscribe(currentGame$(), {
+    skipInitialRun: false,
+    onUpdate: (currentGame) => {
+      console.log('Server Store Id:', store.storeId);
+      console.log('Current game:', currentGame);
 
-  if (currentGame) {
-    const currentGameId = currentGame.id;
-    const players = currentGame.players;
-    const myPlayer = players[0]; // Assuming first player is the current player
-    const opponentPlayer = players[1];
+      if (!currentGame) {
+        return;
+      }
+      // onUpdate trigger on player update thus infinite loop
+      if (lastGameId === currentGame.id) {
+        return;
+      }
+      lastGameId = currentGame.id;
 
-    console.log(
-      'start listening to missiles',
-      currentGameId,
-      myPlayer,
-      'opponent:',
-      opponentPlayer
-    );
+      const currentGameId = currentGame.id;
+      const players = currentGame.players;
+      const myPlayer = players[0]; // Assuming first player is the current player
+      const opponentPlayer = players[1];
 
-    // Listen to MissileFired events for all players - moved outside Effect loop
-    store.subscribe(missiles$(currentGameId, myPlayer), {
-      skipInitialRun: false,
-      // Issue: when specified true, onUpdate effect not being trigger even aftewards
+      console.log(
+        'start listening to missiles',
+        currentGameId,
+        myPlayer,
+        'opponent:',
+        opponentPlayer
+      );
 
-      onSubscribe: () => {
-        console.log('subscribed');
-      },
-      onUpdate: (missiles) => {
-        console.log('🚀 Missiles fired:', missiles.length, 'myPlayer', myPlayer, currentGame);
+      // Listen to MissileFired events for all players - moved outside Effect loop
+      store.subscribe(missiles$(currentGameId, myPlayer), {
+        skipInitialRun: false,
+        // Issue: when specified true, onUpdate effect not being trigger even aftewards
 
-        if (missiles.length <= 0) {
-          return;
-        }
+        onSubscribe: () => {
+          console.log('subscribed = missiles');
+        },
+        onUpdate: (missiles) => {
+          console.log('🚀 Missiles fired:', missiles.length, 'myPlayer', myPlayer, currentGame);
 
-        const lastMissile = missiles?.[0];
+          if (missiles.length <= 0) {
+            return;
+          }
 
-        console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y);
+          const lastMissile = missiles?.[0];
 
-        // Process missile to determine hit/miss and create result event
-        const { missileResultEvent, nextPlayer } = processMissile(
-          store,
-          lastMissile,
-          currentGameId,
-          myPlayer,
-          opponentPlayer
-        );
+          console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y);
 
-        const lastAction = store.query(lastAction$(currentGameId));
-
-        // store.query(lastMissile$(currentGameId, myPlayer));
-
-        const missileResult = store.query(missileResultsById$(currentGameId, lastMissile.id));
-
-        console.log('missile result', missileResult);
-
-        if (missileResult?.length > 0) {
-          return;
-        }
-
-        const newTurn = (lastAction?.turn ?? 0) + 1;
-        /**
-         *
-         * Only 1 action per player at each turn
-         *   - MissileFired events will be reject if not player's turn / turn is not the current turn
-         *
-         * Here we don't associate MissileFired event with turn. Users could rapidly click around where validations happen at server afterwards
-         * (extra turn is granted when player hit a ship)
-         * Edge case when events are fired from multiple devices and arrived out of order
-         *
-         */
-
-        // workaround issue https://github.com/livestorejs/livestore/issues/577 by commiting at next tick
-        // error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
-        setTimeout(() => {
-          // Fire either MissileHit or MissileMiss event based on collision result
-          store.commit(
-            events.ActionCompleted({
-              id: crypto.randomUUID(),
-              gameId: currentGameId,
-              player: myPlayer,
-              turn: newTurn,
-              nextPlayer: nextPlayer,
-            }),
-            missileResultEvent
+          // Process missile to determine hit/miss and create result event
+          const { missileResultEvent, nextPlayer } = processMissile(
+            store,
+            lastMissile,
+            currentGameId,
+            myPlayer,
+            opponentPlayer
           );
-        }, 1);
-      },
-    });
 
-    // separate loop to . Could live in another client
-    store.subscribe(lastAction$(currentGameId), {
-      onUpdate: (action: any) => {
-        console.log('action updated', action);
+          const lastAction = store.query(lastAction$(currentGameId));
 
-        const game = store.query(currentGame$());
+          // store.query(lastMissile$(currentGameId, myPlayer));
 
-        // currentPlayer
+          const missileResult = store.query(missileResultsById$(currentGameId, lastMissile.id));
 
-        console.log('next player', game?.currentPlayer);
+          console.log('missile result', missileResult);
 
-        if (game?.currentPlayer === 'player-2') {
-          agentTurn(store, currentGame, 'player-2', 'player-1');
-        }
-      },
-    });
-  }
+          if (missileResult?.length > 0) {
+            return;
+          }
+
+          const newTurn = (lastAction?.turn ?? 0) + 1;
+          /**
+           *
+           * Only 1 action per player at each turn
+           *   - MissileFired events will be reject if not player's turn / turn is not the current turn
+           *
+           * Here we don't associate MissileFired event with turn. Users could rapidly click around where validations happen at server afterwards
+           * (extra turn is granted when player hit a ship)
+           * Edge case when events are fired from multiple devices and arrived out of order
+           *
+           */
+
+          // workaround issue https://github.com/livestorejs/livestore/issues/577 by commiting at next tick
+          // error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
+          setTimeout(() => {
+            // Fire either MissileHit or MissileMiss event based on collision result
+            store.commit(
+              events.ActionCompleted({
+                id: crypto.randomUUID(),
+                gameId: currentGameId,
+                player: myPlayer,
+                turn: newTurn,
+                nextPlayer: nextPlayer,
+              }),
+              missileResultEvent
+            );
+          }, 1);
+        },
+      });
+
+      // separate loop to . Could live in another client
+      store.subscribe(lastAction$(currentGameId), {
+        onUpdate: (action: any) => {
+          console.log('action updated', action);
+
+          const game = store.query(currentGame$());
+
+          // currentPlayer
+
+          console.log('next player', game?.currentPlayer);
+
+          if (game?.currentPlayer === 'player-2') {
+            agentTurn(store, currentGame, 'player-2', 'player-1');
+          }
+        },
+      });
+    },
+  });
 };
 
 main().catch(console.error);

@@ -56,7 +56,7 @@ export const tables = {
     name: 'allships',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      gameId: State.SQLite.text({ nullable: true }),
+      gameId: State.SQLite.text({ primaryKey: true, nullable: true }),
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
@@ -78,7 +78,7 @@ export const tables = {
     name: 'missiles',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      gameId: State.SQLite.text({ nullable: false }),
+      gameId: State.SQLite.text({ primaryKey: true, nullable: false }),
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
@@ -93,7 +93,7 @@ export const tables = {
     name: 'missle-results',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      gameId: State.SQLite.text({ nullable: false }),
+      gameId: State.SQLite.text({ primaryKey: true, nullable: false }),
       player: State.SQLite.text(),
       x: State.SQLite.integer(),
       y: State.SQLite.integer(),
