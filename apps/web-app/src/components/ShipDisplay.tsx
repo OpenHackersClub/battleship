@@ -22,7 +22,7 @@ export const ShipDisplay: React.FC<ShipDisplayProps> = ({ ships, title }) => {
               <div className={`flex ${ship.orientation === 90 ? 'flex-col' : 'flex-row'}`}>
                 {Array.from({ length: ship.length }, (_, blockIdx) => (
                   <div
-                    key={blockIdx}
+                    key={ship.id}
                     className={`w-4 h-4 border-2 ${colorClass} ${
                       blockIdx === 0 && ship.length > 1
                         ? ship.orientation === 0

@@ -1,5 +1,4 @@
 import { isColliding } from '@battleship/domain';
-import { tables } from '@battleship/schema';
 import { missileResults$ } from '@battleship/schema/queries';
 import { SnapModifier } from '@dnd-kit/abstract/modifiers';
 import { RestrictToElement } from '@dnd-kit/dom/modifiers';
@@ -13,6 +12,7 @@ import {
   calculateShipDimensions,
   getCellStep,
 } from '@/util/coordinates';
+import { tables } from '../schema/schema';
 import { useGameState } from './GameStateProvider';
 import { SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
 

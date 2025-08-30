@@ -1,8 +1,8 @@
 import { stringifyCoordinates } from '@battleship/domain';
-import { events, tables } from '@battleship/schema';
 import { missileResults$, opponentShips$ } from '@battleship/schema/queries';
 import { useClientDocument, useStore } from '@livestore/react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { events, tables } from '../schema/schema';
 import { useGameState } from './GameStateProvider';
 import { SeaGrid } from './SeaGrid';
 

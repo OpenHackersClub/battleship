@@ -16,7 +16,6 @@ export const MissileCellCross: React.FC<MissileCellCrossProps> = ({
   id,
   x,
   y,
-  colSize = 10,
   size = MISSILE_CONSTANTS.CROSS.SIZE,
   thickness = MISSILE_CONSTANTS.CROSS.THICKNESS,
   color = MISSILE_CONSTANTS.CROSS.COLOR,
@@ -89,7 +88,6 @@ interface MissileCellDotProps {
   id: string;
   x: number;
   y: number;
-  colSize?: number;
   size?: number;
   color?: string;
   shadow?: string;
@@ -100,7 +98,6 @@ export const MissileCellDot: React.FC<MissileCellDotProps> = ({
   id,
   x,
   y,
-  colSize = 10,
   size = MISSILE_CONSTANTS.DOT.SIZE,
   color = MISSILE_CONSTANTS.DOT.COLOR,
   shadow = MISSILE_CONSTANTS.DOT.SHADOW,

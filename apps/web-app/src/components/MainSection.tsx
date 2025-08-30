@@ -8,7 +8,7 @@ import {
 import { useDragDropMonitor } from '@dnd-kit/react';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import type React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { tables } from '../schema/schema';
 import { MySeaGrid } from './MySeaGrid';
 import { OpponentSeaGrid } from './OpponentSeaGrid';
@@ -71,15 +71,15 @@ const ActionLog = ({ gameId }: { gameId: string }) => {
         {actionLog.length === 0 ? (
           <p className="text-gray-500 text-xs">No actions yet</p>
         ) : (
-          actionLog.map((log, index) => (
-            <div key={index} className="bg-white p-2 rounded border shadow-sm">
+          actionLog.map((action: any) => (
+            <div key={action?.id} className="bg-white p-2 rounded border shadow-sm">
               <div className="flex flex-row justify-between items-start mb-1">
                 <div className="text-xs">
-                  <span className="font-medium text-blue-600">Turn {log.turn}</span>
+                  <span className="font-medium text-blue-600">Turn {action.turn}</span>
                   <span className="mx-1 text-gray-400">•</span>
-                  <span className="font-medium">{log.player}</span>
+                  <span className="font-medium">{action.player}</span>
                   <span className="mx-1 text-gray-400">•</span>
-                  <span className="text-xs text-gray-700">{log.action}</span>
+                  <span className="text-xs text-gray-700">{action.action}</span>
                 </div>
               </div>
             </div>

@@ -139,7 +139,7 @@ export const SeaGrid: React.FC<SeaGridProps> = ({
       : children;
 
   return (
-    <div className={'p-5 ' + (className || '')}>
+    <div className={`p-5 ${className || ''}`}>
       <DragDropProvider onDragEnd={onDragEnd}>
         <div className="relative">
           <Grid
