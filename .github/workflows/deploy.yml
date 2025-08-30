@@ -32,7 +32,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       
       - name: Build webapp
-        run: pnpm exec turbo build --filter=webapp
+        run: pnpm run build:webapp
+        env:
+          VITE_STORE_ID: ${{ vars.VITE_STORE_ID }}
+          VITE_LIVESTORE_SYNC_URL: ${{ secrets.VITE_LIVESTORE_SYNC_URL }}
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
@@ -40,9 +43,7 @@ jobs:
           workingDirectory: apps/web-app
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: |
-           pages project list
-           pages deploy dist --project-name=battleship-webapp
+          command: pages deploy dist --project-name=battleship-webapp
 
   deploy-cf-worker:
     runs-on: ubuntu-latest
