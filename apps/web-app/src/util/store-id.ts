@@ -5,7 +5,7 @@ export const getStoreId = () => {
   const storeId = searchParams.get('storeId');
   if (storeId !== null) return storeId;
 
-  const newAppId = crypto.randomUUID();
+  const newAppId = import.meta.env.VITE_STORE_ID || crypto.randomUUID();
   searchParams.set('storeId', newAppId);
 
   window.location.search = searchParams.toString();

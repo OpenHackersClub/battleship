@@ -7,12 +7,17 @@ This classical Battleship game is to experiment building turn-based game and AI 
 
 ## Architecture
 
+With Livestore, the game state is syncrhonize across both browser / node clients, with Cloudflare workers (across session/ browsers)
+The Node [serve-rside client](https://docs.livestore.dev/reference/syncing/server-side-clients/) is responsible for confirming action for turn and pick next player.
+
+## Repo Structure
+
 This is a monorepo containing:
 
 ### Applications
-- **web-app**: React frontend application
+- **web-app**: React frontend application on https://battleship-webapp.pages.dev
 - **server-client**: Game server and Node client logic
-- **cf-worker**: Cloudflare Worker for synchronization
+- **cf-worker**: Cloudflare Worker for synchronization (Ref: https://docs.livestore.dev/reference/syncing/sync-provider/cloudflare/)
 
 ### Packages
 - **domain**: Isomorphic game logic
