@@ -3,7 +3,7 @@
 This classical Battleship game is to experiment building turn-based game and AI agents with [LiveStore](https://livestore.dev/)
 
 ## Demo
-[Live Demo](https://web-todomvc-sync-cf.livestore.dev)
+[Live Demo](http://battleship.openhackers.club/)
 
 ## Architecture
 
