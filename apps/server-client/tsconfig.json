@@ -1,18 +1,20 @@
 {
     "compilerOptions": {
-      "target": "ES2022",
+      "target": "ES2023",
       "useDefineForClassFields": true,
-      "lib": ["ES2020"],
+      "lib": ["ES2023"],
       "module": "ESNext",
       "skipLibCheck": true,
-  
-      /* Bundler mode */
+      /* Node.js mode */
       "moduleResolution": "bundler",
-      "resolveJsonModule": true,
-      "isolatedModules": true,
+      "allowImportingTsExtensions": false,
+      "verbatimModuleSyntax": false,
       "noEmit": false,
-      "declaration": true,
       "outDir": "./dist",
+      "noUnusedLocals": true,
+      "noUnusedParameters": true,
+      "erasableSyntaxOnly": true,
+      "noUncheckedSideEffectImports": true,
       "types": ["node"],
       /* Path mapping */
       "baseUrl": ".",
@@ -27,7 +29,7 @@
       // "noUnusedParameters": true,
       "noFallthroughCasesInSwitch": true
     },
-    "include": ["./src"],
+    "include": ["./*.ts", "./src/**/*"],
     "exclude": ["node_modules", "dist"]
   }
   

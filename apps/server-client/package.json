@@ -4,10 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "tsc --build",
     "dev": "tsx index.ts",
     "dev:watch": "vite-node --watch index.ts",
-    "start": "node dist/index.js",
+    "start": "tsx index.ts",
     "test": "vitest"
   },
   "keywords": [],
@@ -18,6 +18,7 @@
     "@battleship/domain": "workspace:^",
     "@battleship/schema": "workspace:^",
     "@effect/platform": "^0.90.6",
+    "@effect/platform-node": "^0.96.0",
     "@livestore/adapter-node": "0.3.1",
     "@livestore/livestore": "0.3.1",
     "@livestore/sync-cf": "0.3.1",

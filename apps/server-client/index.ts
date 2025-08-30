@@ -1,10 +1,10 @@
 import { makeAdapter } from '@livestore/adapter-node';
-import { createStorePromise, queryDb } from '@livestore/livestore';
+import { createStorePromise } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
 import { GAME_CONFIG, pickEmptyTarget, getMissileHitPosition } from '@battleship/domain';
-import { HttpServer, HttpApp, HttpRouter, HttpServerResponse } from '@effect/platform';
+import { HttpServer, HttpRouter, HttpServerResponse } from '@effect/platform';
 import { listen } from './server';
-import { events, schema, tables } from '@battleship/schema';
+import { events, schema } from '@battleship/schema';
 
 import {
   currentGame$,
@@ -173,7 +173,7 @@ const main = async () => {
 
   store.subscribe(currentGame$(), {
     skipInitialRun: false,
-    onUpdate: (currentGame) => {
+    onUpdate: (currentGame: any) => {
       console.log('Server Store Id:', store.storeId);
       console.log('Current game:', currentGame);
 
@@ -203,14 +203,14 @@ const main = async () => {
       );
 
       // Listen to MissileFired events for all players - moved outside Effect loop
-      const unsubscribeMissiles = store.subscribe(missiles$(currentGameId, myPlayer), {
+      const unsubscribeMissiles = store.subscribe(missiles$(currentGameId, myPlayer) as any, {
         skipInitialRun: false,
         // Issue: when specified true, onUpdate effect not being trigger even aftewards
 
         onSubscribe: () => {
           console.log('subscribed = missiles');
         },
-        onUpdate: (missiles) => {
+        onUpdate: (missiles: any[]) => {
           console.log('🚀 Missiles fired:', missiles.length, 'myPlayer', myPlayer, currentGame);
 
           if (missiles.length <= 0) {
@@ -230,11 +230,13 @@ const main = async () => {
             opponentPlayer
           );
 
-          const lastAction = store.query(lastAction$(currentGameId));
+          const lastAction = store.query(lastAction$(currentGameId)) as any;
 
           // store.query(lastMissile$(currentGameId, myPlayer));
 
-          const missileResult = store.query(missileResultsById$(currentGameId, lastMissile.id));
+          const missileResult = store.query(
+            missileResultsById$(currentGameId, lastMissile.id)
+          ) as any[];
 
           console.log('missile result', missileResult);
 
@@ -277,7 +279,7 @@ const main = async () => {
         onUpdate: (action: any) => {
           console.log('action updated', action);
 
-          const game = store.query(currentGame$());
+          const game = store.query(currentGame$()) as any;
 
           // currentPlayer
 

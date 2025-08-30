@@ -13,7 +13,6 @@ This is a monorepo containing:
 - **web-app**: React frontend application
 - **server-client**: Game server and Node client logic
 - **cf-worker**: Cloudflare Worker for synchronization
-- **cf-worker-api**: API (Unused)
 
 ### Packages
 - **domain**: Isomorphic game logic

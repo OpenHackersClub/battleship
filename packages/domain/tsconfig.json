@@ -11,6 +11,7 @@
     "moduleDetection": "force",
     "strict": true,
     "noEmit": false,
+    "declaration": true,
 
     "outDir": "./dist",
     "noUnusedLocals": true,
