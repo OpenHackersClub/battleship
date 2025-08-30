@@ -5,12 +5,15 @@ This classical Battleship game is to experiment building turn-based game and AI 
 ## Demo
 [Live Demo](http://battleship.openhackers.club/)
 
+![demo-battleship-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/b3384062-17ef-4940-9316-3ef5e9358a12)
+
 ## Architecture
 
 With Livestore, the game state is syncrhonize across both browser / node clients, with Cloudflare workers (across session/ browsers)
 The Node [serve-rside client](https://docs.livestore.dev/reference/syncing/server-side-clients/) is responsible for confirming action for turn and pick next player.
 
 ## Repo Structure
+
 
 This is a monorepo containing:
 
