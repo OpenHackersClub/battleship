@@ -17,6 +17,7 @@
   "dependencies": {
     "@battleship/domain": "workspace:^",
     "@battleship/schema": "workspace:^",
+    "@effect/platform": "^0.90.6",
     "@livestore/adapter-node": "0.3.1",
     "@livestore/livestore": "0.3.1",
     "@livestore/sync-cf": "0.3.1",
@@ -27,8 +28,8 @@
     "tsx": "^4.20.4",
     "typescript": "^5.9.2",
     "vite": "^6.3.4",
-    "vitest": "^3.2.4",
     "vite-node": "^3.2.4",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.4"
   }
 }

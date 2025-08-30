@@ -2,7 +2,8 @@ import { makeAdapter } from '@livestore/adapter-node';
 import { createStorePromise, queryDb } from '@livestore/livestore';
 import { makeCfSync } from '@livestore/sync-cf';
 import { GAME_CONFIG, pickEmptyTarget, getMissileHitPosition } from '@battleship/domain';
-
+import { HttpServer, HttpApp, HttpRouter, HttpServerResponse } from '@effect/platform';
+import { listen } from './server';
 import { events, schema, tables } from '@battleship/schema';
 
 import {
@@ -14,7 +15,9 @@ import {
   allMissiles$,
 } from '@battleship/schema/queries';
 
-const LIVESTORE_SYNC_URL = 'ws://localhost:8787';
+const LIVESTORE_SYNC_URL =
+  (globalThis as any)?.process?.env?.LIVESTORE_SYNC_URL || 'ws://localhost:8787';
+const PORT = Number((globalThis as any)?.process?.env?.VITE_SERVER_PORT) || 10000;
 
 // TODO fix to use schema types
 /**
@@ -290,5 +293,12 @@ const main = async () => {
     },
   });
 };
+
+// Define the router with a single route for the root URL
+const router = HttpRouter.empty.pipe(HttpRouter.get('/health', HttpServerResponse.text('ok')));
+// Set up the application server with logging
+const app = router.pipe(HttpServer.serve(), HttpServer.withLogAddress);
+
+listen(app, PORT);
 
 main().catch(console.error);
