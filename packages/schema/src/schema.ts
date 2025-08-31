@@ -1,5 +1,11 @@
 import { Events, makeSchema, Schema, SessionIdSymbol, State } from '@livestore/livestore';
 
+// Game phase enum
+export enum GamePhase {
+  Setup = 'setup',
+  Playing = 'playing',
+  Finished = 'finished',
+}
 // TODO encryption
 // We need to decrypt our own ships (to show on UI) but not the others
 
@@ -158,6 +164,15 @@ export const events = {
       createdAt: Schema.optional(Schema.DateFromNumber),
     }),
   }),
+  GameUpdated: Events.synced({
+    name: 'v1.GameUpdated',
+    schema: Schema.Struct({
+      id: Schema.String,
+      gamePhase: Schema.optional(Schema.Literal('setup', 'playing', 'finished')),
+      players: Schema.optional(Schema.Array(Schema.String)),
+      createdAt: Schema.optional(Schema.DateFromNumber),
+    }),
+  }),
   ShipPositionCreated: Events.synced({
     name: 'v1.ShipPositionCreated',
     schema: Schema.Struct({
@@ -231,6 +246,10 @@ const materializers = State.SQLite.materializers(events, {
       currentPlayer: players?.[0] ?? '',
       players: players ?? [],
       createdAt: createdAt ?? new Date(),
+    }),
+  'v1.GameUpdated': ({ id, gamePhase }) =>
+    tables.games.where({ id }).update({
+      gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
     }),
   'v1.ShipPositionCreated': ({ id, gameId, player, x, y, orientation, length }) =>
     tables.allShips.insert({

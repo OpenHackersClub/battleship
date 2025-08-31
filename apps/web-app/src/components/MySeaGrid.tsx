@@ -1,9 +1,9 @@
 import { isColliding } from '@battleship/domain';
-import { missileResults$ } from '@battleship/schema/queries';
+import { currentGame$, missileResults$ } from '@battleship/schema/queries';
 import { SnapModifier } from '@dnd-kit/abstract/modifiers';
 import { RestrictToElement } from '@dnd-kit/dom/modifiers';
 import { type DragDropEvents, useDraggable } from '@dnd-kit/react';
-import { useClientDocument, useStore } from '@livestore/react';
+import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import type React from 'react';
 import { useCallback, useRef } from 'react';
 import {
@@ -12,7 +12,7 @@ import {
   calculateShipDimensions,
   getCellStep,
 } from '@/util/coordinates';
-import { tables } from '../schema/schema';
+import { GamePhase, tables } from '../schema/schema';
 import { useGameState } from './GameStateProvider';
 import { SeaGrid, SHIP_COLOR_CLASSES } from './SeaGrid';
 
@@ -25,10 +25,12 @@ const DraggableShip: React.FC<{
   orientation: 0 | 90;
   cellPixelSize: CellPixelSize;
   gridElement: HTMLDivElement | null;
-}> = ({ id, idx, x, y, length, orientation, cellPixelSize, gridElement }) => {
+  isDragDisabled: boolean;
+}> = ({ id, idx, x, y, length, orientation, cellPixelSize, gridElement, isDragDisabled }) => {
   const { stepX, stepY } = getCellStep(cellPixelSize);
   const { ref, isDragging } = useDraggable({
     id,
+    disabled: isDragDisabled,
     modifiers: [
       SnapModifier.configure({
         size: {
@@ -46,15 +48,17 @@ const DraggableShip: React.FC<{
   return (
     <div
       ref={ref}
-      className={`absolute border-2 rounded cursor-grab flex items-center justify-center text-white font-bold text-sm ${
+      className={`absolute border-2 rounded flex items-center justify-center text-white font-bold text-sm ${
         SHIP_COLOR_CLASSES[idx % SHIP_COLOR_CLASSES.length]
-      } ${isDragging ? 'z-50 opacity-80 brightness-90' : 'z-10'}`}
+      } ${isDragging ? 'z-50 opacity-80 brightness-90' : 'z-10'} ${
+        isDragDisabled ? 'cursor-not-allowed opacity-70' : 'cursor-grab'
+      }`}
       style={{
         left,
         top,
         width,
         height,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : isDragDisabled ? 'not-allowed' : 'grab',
       }}
     ></div>
   );
@@ -66,6 +70,12 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
   const { currentGameId } = useGameState();
 
   const latestCellPixelSize = useRef<CellPixelSize>({ width: 0, height: 0, gapX: 0, gapY: 0 });
+
+  // Get current game to check phase
+  const currentGame = useQuery(currentGame$());
+
+  // Disable drag & drop if game phase is not Setup
+  const isDragDisabled = currentGame?.gamePhase !== GamePhase.Setup;
 
   const opponentMissileResults = store.useQuery(
     missileResults$(currentGameId || '', opponent || '')
@@ -129,6 +139,7 @@ export const MySeaGrid: React.FC<{ player: string }> = ({ player }) => {
                 orientation={ship.orientation}
                 cellPixelSize={cellPixelSize}
                 gridElement={gridRef.current}
+                isDragDisabled={isDragDisabled}
               />
             ))}
           </>

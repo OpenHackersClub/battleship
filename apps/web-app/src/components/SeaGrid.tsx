@@ -23,51 +23,63 @@ const Grid = React.forwardRef<
     children: React.ReactNode;
     missileResults?: MissileResult[];
     ships?: Ship[];
+    clickDisabled?: boolean;
     onCellClick?: (x: number, y: number) => void;
   }
->(({ rowSize, colSize, children, missileResults = [], ships = [], onCellClick }, ref) => {
-  // Generate grid column and row classes based on cellCount
-  const gridColsClass = `grid-cols-${colSize}`;
-  const { checkMissileHit } = useMissileHitDetection();
+>(
+  (
+    { rowSize, colSize, children, missileResults = [], ships = [], clickDisabled, onCellClick },
+    ref
+  ) => {
+    // Generate grid column and row classes based on cellCount
+    const gridColsClass = `grid-cols-${colSize}`;
+    const { checkMissileHit } = useMissileHitDetection();
 
-  // Create a map of missile results by coordinates for efficient lookup
-  const missileMap = new Map<string, MissileResult>();
-  missileResults.forEach((missile) => {
-    missileMap.set(`${missile.x}-${missile.y}`, missile);
-  });
+    // Create a map of missile results by coordinates for efficient lookup
+    const missileMap = new Map<string, MissileResult>();
+    missileResults.forEach((missile) => {
+      missileMap.set(`${missile.x}-${missile.y}`, missile);
+    });
 
-  return (
-    <div ref={ref} className={`relative bg-white grid ${gridColsClass} gap-2`}>
-      {/* Generate grid cells */}
-      {Array.from({ length: rowSize * colSize }, (_, i) => {
-        const x = i % colSize;
-        const y = Math.floor(i / colSize);
-        const missile = missileMap.get(`${x}-${y}`);
-        const isHit = missile ? checkMissileHit(missile, ships) : false;
+    return (
+      <div ref={ref} className={`relative bg-white grid ${gridColsClass} gap-2`}>
+        {/* Generate grid cells */}
+        {Array.from({ length: rowSize * colSize }, (_, i) => {
+          const x = i % colSize;
+          const y = Math.floor(i / colSize);
+          const missile = missileMap.get(`${x}-${y}`);
+          const isHit = missile ? checkMissileHit(missile, ships) : false;
 
-        return (
-          <button
-            key={`cell-${x}-${y}`}
-            type="button"
-            className="aspect-square border border-blue-200 bg-blue-100 relative flex items-center justify-center cursor-pointer hover:bg-blue-400/40 hover:border-blue-500 z-"
-            onClick={() => onCellClick?.(x, y)}
-          >
-            {missile &&
-              (isHit ? (
-                <MissileCellCross id={missile.id} x={missile.x} y={missile.y} inline={true} />
-              ) : (
-                <MissileCellDot id={missile.id} x={missile.x} y={missile.y} inline={true} />
-              ))}
-          </button>
-        );
-      })}
-      {/* Overlay for draggable items using the same grid structure. No overlay if clickable */}
-      {!onCellClick && (
-        <div className={`absolute inset-0 grid ${gridColsClass} gap-2 z-10`}>{children}</div>
-      )}
-    </div>
-  );
-});
+          return (
+            <button
+              key={`cell-${x}-${y}`}
+              type="button"
+              disabled={clickDisabled}
+              className={`aspect-square border border-blue-200 bg-blue-100 relative flex items-center justify-center ${
+                clickDisabled
+                  ? 'cursor-not-allowed'
+                  : 'cursor-pointer hover:bg-blue-400/40 hover:border-blue-500'
+              }`}
+              onClick={() => onCellClick?.(x, y)}
+            >
+              {missile &&
+                (isHit ? (
+                  <MissileCellCross id={missile.id} x={missile.x} y={missile.y} inline={true} />
+                ) : (
+                  <MissileCellDot id={missile.id} x={missile.x} y={missile.y} inline={true} />
+                ))}
+            </button>
+          );
+        })}
+        {/* Overlay for draggable items using the same grid structure. No overlay if clickable */}
+        {clickDisabled ||
+          (!onCellClick && (
+            <div className={`absolute inset-0 grid ${gridColsClass} gap-2 z-10`}>{children}</div>
+          ))}
+      </div>
+    );
+  }
+);
 
 type SeaGridChildrenArg = {
   cellPixelSize: CellPixelSize;
@@ -83,6 +95,7 @@ type SeaGridProps = {
   children?: React.ReactNode | ((arg: SeaGridChildrenArg) => React.ReactNode);
   missileResults?: MissileResult[];
   ships?: Ship[];
+  clickDisabled?: boolean;
   onCellClick?: (x: number, y: number) => void;
 };
 
@@ -95,6 +108,7 @@ export const SeaGrid: React.FC<SeaGridProps> = ({
   children,
   missileResults,
   ships,
+  clickDisabled,
   onCellClick,
 }) => {
   const [rowSize, _setRowSize] = useState(rowSizeProp);
@@ -149,6 +163,7 @@ export const SeaGrid: React.FC<SeaGridProps> = ({
             missileResults={missileResults}
             ships={ships}
             onCellClick={onCellClick}
+            clickDisabled={clickDisabled}
           >
             {renderedChildren}
           </Grid>

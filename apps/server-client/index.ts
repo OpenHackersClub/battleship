@@ -16,7 +16,7 @@ import {
 } from '@battleship/schema/queries';
 
 const LIVESTORE_SYNC_URL =
-  (globalThis as any)?.process?.env?.LIVESTORE_SYNC_URL || 'ws://localhost:8787';
+  (globalThis as any)?.process?.env?.VITE_LIVESTORE_SYNC_URL || 'ws://localhost:8787';
 const PORT = Number((globalThis as any)?.process?.env?.VITE_SERVER_PORT) || 10000;
 
 // TODO fix to use schema types
@@ -171,6 +171,8 @@ const main = async () => {
   let lastGameId = '';
   let unsubscribeHandlers: (() => void)[] = [];
 
+  console.log('Server started', LIVESTORE_SYNC_URL, PORT);
+
   store.subscribe(currentGame$(), {
     skipInitialRun: false,
     onUpdate: (currentGame: any) => {
@@ -185,7 +187,10 @@ const main = async () => {
         return;
       }
 
-      unsubscribeHandlers.map((unsubscribe) => unsubscribe?.());
+      console.log('Unsubscribing listeners');
+      unsubscribeHandlers.forEach((unsubscribe) => {
+        unsubscribe?.();
+      });
       unsubscribeHandlers = [];
       lastGameId = currentGame.id;
 

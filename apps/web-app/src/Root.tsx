@@ -15,7 +15,7 @@ import { getStoreId } from './util/store-id';
 const AppBody: React.FC = () => (
   <div className="flex h-screen">
     <div className="flex-1 flex flex-col">
-      <section className="container p-6 flex-1">
+      <section className="container p-6 flex-1  mx-auto">
         <GameStateProvider>
           <Header />
           <MainSection />

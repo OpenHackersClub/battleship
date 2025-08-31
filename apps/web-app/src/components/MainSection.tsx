@@ -1,6 +1,7 @@
 import { areAllShipsSunk } from '@battleship/domain';
 import {
   allMissiles$,
+  currentGame$,
   gameActions$,
   missileResults$,
   opponentShips$,
@@ -9,11 +10,14 @@ import { useDragDropMonitor } from '@dnd-kit/react';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import type React from 'react';
 import { useEffect, useMemo } from 'react';
-import { tables } from '../schema/schema';
+import { GamePhase, tables } from '../schema/schema';
+import { GameService } from '../util/gameService';
+import { useGameState } from './GameStateProvider';
 import { MySeaGrid } from './MySeaGrid';
 import { OpponentSeaGrid } from './OpponentSeaGrid';
 import { ShipDisplay } from './ShipDisplay';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 
 export const PlayerTitle = ({ playerName }: { playerName: string }) => {
@@ -71,8 +75,11 @@ const ActionLog = ({ gameId }: { gameId: string }) => {
         {actionLog.length === 0 ? (
           <p className="text-gray-500 text-xs">No actions yet</p>
         ) : (
-          actionLog.map((action: any) => (
-            <div key={action?.id} className="bg-white p-2 rounded border shadow-sm">
+          actionLog.map((action) => (
+            <div
+              key={`${action.turn}-${action.player}`}
+              className="bg-white p-2 rounded border shadow-sm"
+            >
               <div className="flex flex-row justify-between items-start mb-1">
                 <div className="text-xs">
                   <span className="font-medium text-blue-600">Turn {action.turn}</span>
@@ -95,6 +102,13 @@ export const MainSection: React.FC = () => {
     tables.uiState
   );
   const { store } = useStore();
+  const { newGame } = useGameState();
+
+  // Initialize game service
+  const gameService = useMemo(() => new GameService(store), [store]);
+
+  // Get current game to check phase
+  const currentGame = useQuery(currentGame$());
 
   // Get missile results for both players
   const myMissileResults = useQuery(missileResults$(currentGameId || '', myPlayer));
@@ -109,10 +123,10 @@ export const MainSection: React.FC = () => {
     if (!myMissileResults || !opponentMissileResults || !myShips || !opponentShips) return;
 
     // Check if I won (all opponent ships sunk by my missiles)
-    const opponentShipsSunk = areAllShipsSunk(opponentShips, myMissileResults);
+    const opponentShipsSunk = areAllShipsSunk([...opponentShips], [...myMissileResults]);
 
     // Check if opponent won (all my ships sunk by opponent missiles)
-    const myShipsSunk = areAllShipsSunk(myShips, opponentMissileResults);
+    const myShipsSunk = areAllShipsSunk([...myShips], [...opponentMissileResults]);
 
     if (opponentShipsSunk) {
       console.log(`🎉 GAME WON! ${myPlayer} has sunk all of ${opponent}'s ships!`);
@@ -155,10 +169,6 @@ export const MainSection: React.FC = () => {
     },
   });
 
-  if (!currentGameId) {
-    return <div />;
-  }
-
   return (
     <section className="main">
       {winner && (
@@ -169,21 +179,54 @@ export const MainSection: React.FC = () => {
           <p className="text-lg mt-2">All ships have been sunk!</p>
         </div>
       )}
-      <div className="flex gap-8 justify-center items-start p-4 w-full max-w-7xl mx-auto">
+      <div className="flex gap-4 justify-center items-start p-4 w-full max-w-7xl mx-auto">
         <div className="flex-1 min-w-80">
-          <MySeaGrid player={myPlayer} />
-          <PlayerTitle playerName={myPlayer} />
-          <ShipDisplay ships={myShips || []} title="My Ships" />
+          {currentGameId && (
+            <>
+              <MySeaGrid player={myPlayer} />
+              <PlayerTitle playerName={myPlayer} />
+              <ShipDisplay ships={[...(myShips || [])]} title="My Ships" />
+            </>
+          )}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1 min-w-80">
-          <OpponentSeaGrid player={opponent} />
-          <PlayerTitle playerName={opponent} />
-          <ShipDisplay ships={opponentShips || []} title={`${opponent}'s Ships`} />
+          {currentGameId && (
+            <>
+              <OpponentSeaGrid player={opponent} />
+              <PlayerTitle playerName={opponent} />
+              <ShipDisplay ships={[...(opponentShips || [])]} title={`${opponent}'s Ships`} />
+            </>
+          )}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1 min-w-80">
-          <ActionLog gameId={currentGameId} />
+          <div className="mb-4">
+            <Button onClick={() => newGame()} variant="outline" className="w-full mb-2">
+              🚢 New Game
+            </Button>
+            {currentGame?.gamePhase === GamePhase.Setup && (
+              <Button
+                onClick={() => {
+                  gameService.startGame({
+                    currentGameId: currentGameId || '',
+                    myPlayer,
+                    opponent,
+                    currentGame,
+                  });
+                }}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded"
+              >
+                🚀 I'm Ready!
+              </Button>
+            )}
+            {currentGame?.gamePhase === GamePhase.Playing && (
+              <div className="w-full text-center text-green-600 font-semibold py-2 px-4 rounded bg-green-50 border border-green-200">
+                🎮 Game Started
+              </div>
+            )}
+          </div>
+          {currentGameId && <ActionLog gameId={currentGameId} />}
         </div>
       </div>
     </section>

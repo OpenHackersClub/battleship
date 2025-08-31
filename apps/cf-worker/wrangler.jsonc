@@ -16,8 +16,7 @@
 
   // Environment variables
   "vars": {
-    "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec",
-    "VITE_LIVESTORE_SYNC_URL": "https://battleship-sync-worker.debuggingfuturecors.workers.dev"
+    "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
   },
 
   // Durable Objects

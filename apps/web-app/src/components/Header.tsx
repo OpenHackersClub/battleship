@@ -1,23 +1,14 @@
 import { allMissiles$, currentGame$ } from '@battleship/schema/queries';
 import { useQuery, useStore } from '@livestore/react';
 import type React from 'react';
-import { useGameState } from './GameStateProvider';
 import { Alert, AlertDescription } from './ui/alert';
-// import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from './ui/menubar';
-import { Button } from './ui/button';
 
 export const Header: React.FC = () => {
   const { store } = useStore();
 
   const currentGame = useQuery(currentGame$());
 
-  const { currentGameId, newGame } = useGameState();
-
-  const missiles = store.useQuery(allMissiles$(currentGameId ?? ''));
-
-  const handleStartNewGame = () => {
-    newGame();
-  };
+  const missiles = store.useQuery(allMissiles$(currentGame?.id ?? ''));
 
   return (
     <header className="mb-6">
@@ -26,9 +17,9 @@ export const Header: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <div className="text-sm text-muted-foreground">
-            {currentGameId ? (
+            {currentGame?.id ? (
               <span>
-                Game: <span className="font-mono">{currentGameId}</span>
+                Game: <span className="font-mono">{currentGame.id}</span>
               </span>
             ) : (
               <span>No game</span>
@@ -55,16 +46,14 @@ export const Header: React.FC = () => {
               {missiles?.length ?? 0}
             </span>
           </div>
-
-          <Button variant="outline" onClick={handleStartNewGame}>
-            Start New Game
-          </Button>
         </div>
       </div>
 
       <Alert className="mt-4 mb-4 text-center">
         <AlertDescription>
           1. Drag & Drop your ships 2. Start 3. Click on enemy waters to fire missiles!
+          <br />
+          Whoever HIT got an extra turn!
         </AlertDescription>
       </Alert>
     </header>

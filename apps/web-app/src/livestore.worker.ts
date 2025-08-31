@@ -5,7 +5,9 @@ import { schema } from './schema/schema';
 makeWorker({
   schema,
   sync: {
-    backend: makeCfSync({ url: import.meta.env.VITE_LIVESTORE_SYNC_URL }),
+    backend: makeCfSync({
+      url: import.meta.env.VITE_LIVESTORE_SYNC_URL || 'http://localhost:8787',
+    }),
     initialSyncOptions: { _tag: 'Blocking', timeout: 5000 },
   },
 });

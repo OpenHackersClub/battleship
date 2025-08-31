@@ -1,8 +1,8 @@
 import { stringifyCoordinates } from '@battleship/domain';
-import { missileResults$, opponentShips$ } from '@battleship/schema/queries';
-import { useClientDocument, useStore } from '@livestore/react';
+import { currentGame$, missileResults$, opponentShips$ } from '@battleship/schema/queries';
+import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useMemo } from 'react';
-import { events, tables } from '../schema/schema';
+import { events, GamePhase, tables } from '../schema/schema';
 import { useGameState } from './GameStateProvider';
 import { SeaGrid } from './SeaGrid';
 
@@ -12,6 +12,9 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
   const { currentGameId } = useGameState();
 
   const [{ myPlayer, opponent }] = useClientDocument(tables.uiState);
+
+  // Get current game to check phase
+  const currentGame = useQuery(currentGame$());
 
   const missileResults = store.useQuery(missileResults$(currentGameId ?? '', myPlayer));
 
@@ -54,6 +57,7 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
         player={player}
         missileResults={missileResults ?? []}
         ships={opponentShips ?? []}
+        clickDisabled={currentGame?.gamePhase !== GamePhase.Playing}
         onCellClick={handleCellClick}
       />
       <div className="mt-2" />
