@@ -209,7 +209,9 @@ export const MainSection: React.FC = () => {
                     currentGame,
                   });
                 }}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded"
+                variant="default"
+                size="lg"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
               >
                 🚀 I'm Ready!
               </Button>
