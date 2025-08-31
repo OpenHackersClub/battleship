@@ -181,22 +181,16 @@ export const MainSection: React.FC = () => {
       )}
       <div className="flex gap-4 justify-center items-start p-4 w-full max-w-7xl mx-auto">
         <div className="flex-1 min-w-80">
-          {currentGameId && (
-            <>
-              <MySeaGrid player={myPlayer} />
-              <PlayerTitle playerName={myPlayer} />
-              <ShipDisplay ships={[...(myShips || [])]} title="My Ships" />
-            </>
-          )}
+          <MySeaGrid player={myPlayer} />
+          <PlayerTitle playerName={myPlayer} />
+          {currentGameId && <ShipDisplay ships={[...(myShips || [])]} title="My Ships" />}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1 min-w-80">
+          <OpponentSeaGrid player={opponent} />
+          <PlayerTitle playerName={opponent} />
           {currentGameId && (
-            <>
-              <OpponentSeaGrid player={opponent} />
-              <PlayerTitle playerName={opponent} />
-              <ShipDisplay ships={[...(opponentShips || [])]} title={`${opponent}'s Ships`} />
-            </>
+            <ShipDisplay ships={[...(opponentShips || [])]} title={`${opponent}'s Ships`} />
           )}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />

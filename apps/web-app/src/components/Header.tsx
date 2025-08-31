@@ -49,7 +49,7 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      <Alert className="mt-4 mb-4 text-center">
+      <Alert className="mt-4 mb-4 text-left">
         <AlertDescription>
           1. Drag & Drop your ships 2. Start 3. Click on enemy waters to fire missiles!
           <br />
