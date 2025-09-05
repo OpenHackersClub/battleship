@@ -226,6 +226,22 @@ const main = async () => {
 
           console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y);
 
+          /**
+           *
+           * Only 1 action per player at each turn
+           *   - MissileFired events will be rejected if it's not player's turn
+           *
+           * Here we don't associate MissileFired event with turn. Users could rapidly click around where validations happen at server afterwards
+           * (extra turn is granted when player hit a ship)
+           *
+           * Edge case when events are fired from multiple devices and arrived out of order
+           *
+           */
+
+          if (lastMissile.player !== currentGame.currentPlayer) {
+            return;
+          }
+
           // Process missile to determine hit/miss and create result event
           const { missileResultEvent, nextPlayer } = processMissile(
             store,
@@ -250,16 +266,6 @@ const main = async () => {
           }
 
           const newTurn = (lastAction?.turn ?? 0) + 1;
-          /**
-           *
-           * Only 1 action per player at each turn
-           *   - MissileFired events will be reject if not player's turn / turn is not the current turn
-           *
-           * Here we don't associate MissileFired event with turn. Users could rapidly click around where validations happen at server afterwards
-           * (extra turn is granted when player hit a ship)
-           * Edge case when events are fired from multiple devices and arrived out of order
-           *
-           */
 
           // workaround issue https://github.com/livestorejs/livestore/issues/577 by commiting at next tick
           // error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
