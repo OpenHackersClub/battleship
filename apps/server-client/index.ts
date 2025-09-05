@@ -579,6 +579,48 @@ const main = async () => {
            * Edge case when events are fired from multiple devices and arrived out of order
            *
            */
+          console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y);
+
+          /**
+           *
+           * Only 1 action per player at each turn
+           *   - MissileFired events will be rejected if it's not player's turn
+           *
+           * Here we don't associate MissileFired event with turn. Users could rapidly click around where validations happen at server afterwards
+           * (extra turn is granted when player hit a ship)
+           *
+           * Edge case when events are fired from multiple devices and arrived out of order
+           *
+           */
+
+          if (lastMissile.player !== currentGame.currentPlayer) {
+            return;
+          }
+
+          // Process missile to determine hit/miss and create result event
+          const { missileResultEvent, nextPlayer } = processMissile(
+            store,
+            lastMissile,
+            currentGameId,
+            myPlayer,
+            opponentPlayer
+          );
+
+          const lastAction = store.query(lastAction$(currentGameId)) as any;
+
+          // store.query(lastMissile$(currentGameId, myPlayer));
+
+          const missileResult = store.query(
+            missileResultsById$(currentGameId, lastMissile.id)
+          ) as any[];
+
+          console.log('missile result', missileResult);
+
+          if (missileResult?.length > 0) {
+            return;
+          }
+
+          const newTurn = (lastAction?.turn ?? 0) + 1;
 
           if (lastMissile.player !== currentGame.currentPlayer) {
             await Effect.runPromise(
