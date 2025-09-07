@@ -594,6 +594,7 @@ const main = async () => {
            */
 
           if (lastMissile.player !== currentGame.currentPlayer) {
+            console.log('missile fired out of turn', lastMissile.player, currentGame.currentPlayer);
             return;
           }
 
