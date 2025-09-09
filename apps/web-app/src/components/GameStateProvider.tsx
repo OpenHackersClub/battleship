@@ -36,7 +36,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         currentGameId: currentGame.id,
         myPlayer: currentGame.players[0],
         opponent: currentGame.players[1],
-        winner: undefined,
+        winner: null,
       });
     }
   }, [currentGame, setState]);
@@ -64,7 +64,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       myPlayer,
       opponent,
       myShips: [],
-      winner: undefined,
+      winner: null,
     });
   }, [store.commit, setState]);
 

@@ -119,7 +119,7 @@ export const tables = {
       myPlayer: Schema.String,
       // TODO consider multiplayer
       opponent: Schema.String,
-      winner: Schema.optional(Schema.String),
+      winner: Schema.NullOr(Schema.String),
       myShips: Schema.Array(
         Schema.Struct({
           id: Schema.String,
@@ -137,7 +137,7 @@ export const tables = {
         currentGameId: '',
         myPlayer: '',
         opponent: '',
-        winner: undefined,
+        winner: null,
         myShips: [],
       },
     },

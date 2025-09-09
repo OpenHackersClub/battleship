@@ -6,3 +6,4 @@ export * from './winCondition';
 export * from './types';
 export * from './missile-processing';
 export * from './coordinates';
+export * from './strategy';
