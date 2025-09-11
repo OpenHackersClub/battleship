@@ -51,15 +51,27 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
     [store, currentGameId, myPlayer, missileResults]
   );
 
+  const isMyTurn = currentGame?.currentPlayer === myPlayer;
+  const clickDisabled = currentGame?.gamePhase !== GamePhase.Playing || !isMyTurn;
+
   return (
     <>
-      <SeaGrid
-        player={player}
-        missileResults={missileResults ?? []}
-        ships={opponentShips ?? []}
-        clickDisabled={currentGame?.gamePhase !== GamePhase.Playing}
-        onCellClick={handleCellClick}
-      />
+      <div className="relative">
+        <SeaGrid
+          player={player}
+          missileResults={missileResults ?? []}
+          ships={opponentShips ?? []}
+          clickDisabled={clickDisabled}
+          onCellClick={handleCellClick}
+        />
+        {!isMyTurn && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="px-3 py-1 rounded bg-black/60 text-white text-sm select-none">
+              waiting opponent
+            </div>
+          </div>
+        )}
+      </div>
       <div className="mt-2" />
     </>
   );

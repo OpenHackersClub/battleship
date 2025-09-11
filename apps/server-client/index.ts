@@ -12,7 +12,7 @@ import * as OpenAiLanguageModel from '@effect/ai-openai/OpenAiLanguageModel';
 import * as OpenAiClient from '@effect/ai-openai/OpenAiClient';
 import { HttpServer, HttpRouter, HttpServerResponse } from '@effect/platform';
 import { NodeHttpClient } from '@effect/platform-node';
-import { Effect, Option, LogLevel, Logger, Redacted, Ref } from 'effect';
+import { Effect, Option, LogLevel, Logger, Redacted, TSemaphore } from 'effect';
 import { listen } from './server';
 import { events, schema } from '@battleship/schema';
 
@@ -42,55 +42,43 @@ const PORT = ENV.PORT;
 
 // Using Effect's built-in pretty logger directly
 
-// Create a lock for missile processing to prevent race conditions
-const createMissileProcessingLock = () => Ref.make(false);
-
-// Lock-based missile processing to prevent race conditions
-const processMissileWithLock = (
+// Semaphore-based missile processing to prevent race conditions
+const processMissileWithSemaphore = (
   store: any,
   lastMissile: any,
   currentGameId: string,
   myPlayer: string,
   opponentPlayer: string,
-  lock: Ref.Ref<boolean>
+  semaphore: TSemaphore.TSemaphore
 ) => {
   return Effect.gen(function* () {
-    // Try to acquire the lock
-    const isLocked = yield* Ref.get(lock);
-    if (isLocked) {
-      yield* Effect.log('🔒 Missile processing already in progress, skipping', LogLevel.Debug);
-      return;
-    }
+    return yield* TSemaphore.withPermit(semaphore)(
+      Effect.gen(function* () {
+        // Process missile to determine hit/miss and create result event
+        const { missileResultEvent, nextPlayer } = processMissile(
+          store,
+          lastMissile,
+          currentGameId,
+          myPlayer,
+          opponentPlayer
+        );
 
-    // Set the lock
-    yield* Ref.set(lock, true);
+        const lastAction = store.query(lastAction$(currentGameId)) as any;
+        const missileResult = store.query(
+          missileResultsById$(currentGameId, lastMissile.id)
+        ) as any[];
 
-    try {
-      // Process missile to determine hit/miss and create result event
-      const { missileResultEvent, nextPlayer } = processMissile(
-        store,
-        lastMissile,
-        currentGameId,
-        myPlayer,
-        opponentPlayer
-      );
+        yield* Effect.log('Missile result processed', LogLevel.Debug, missileResult);
 
-      const lastAction = store.query(lastAction$(currentGameId)) as any;
-      const missileResult = store.query(
-        missileResultsById$(currentGameId, lastMissile.id)
-      ) as any[];
+        if (missileResult?.length > 0) {
+          return;
+        }
 
-      yield* Effect.log('Missile result processed', LogLevel.Debug, missileResult);
+        const newTurn = (lastAction?.turn ?? 0) + 1;
 
-      if (missileResult?.length > 0) {
-        return;
-      }
-
-      const newTurn = (lastAction?.turn ?? 0) + 1;
-
-      // workaround issue https://github.com/livestorejs/livestore/issues/577 by commiting at next tick
-      // error TypeError: Cannot read properties of undefined (reading 'refreshedAtoms')
-      setTimeout(() => {
+        // Workaround issue https://github.com/livestorejs/livestore/issues/577 by committing on next tick
+        // but still inside the semaphore critical section to avoid duplicates
+        yield* Effect.sleep(1);
         // Fire either MissileHit or MissileMiss event based on collision result
         store.commit(
           events.ActionCompleted({
@@ -102,11 +90,8 @@ const processMissileWithLock = (
           }),
           missileResultEvent
         );
-      }, 1);
-    } finally {
-      // Always release the lock
-      yield* Ref.set(lock, false);
-    }
+      })
+    );
   });
 };
 
@@ -313,7 +298,8 @@ const agentTurn = (
   store: any,
   currentGame: any,
   myPlayer: string,
-  opponentPlayer: string
+  opponentPlayer: string,
+  semaphore: TSemaphore.TSemaphore
 ): Effect.Effect<void, any, unknown> => {
   return Effect.gen(function* () {
     const gameId = currentGame.id;
@@ -403,37 +389,16 @@ const agentTurn = (
     // Fire the missile first
     store.commit(events.MissileFired(missile));
 
-    // Process the missile result using our extracted function
-    const { missileResultEvent, nextPlayer } = processMissile(
-      store,
-      missile,
-      gameId,
-      myPlayer,
-      opponentPlayer
-    );
-
-    // Get current turn for action completion
-    const lastAction = store.query(lastAction$(gameId));
-    const newTurn = (lastAction?.turn ?? 0) + 1;
-
-    // Commit the result
-    store.commit(
-      events.ActionCompleted({
-        id: crypto.randomUUID(),
-        gameId: gameId,
-        player: myPlayer,
-        turn: newTurn,
-        nextPlayer: nextPlayer,
-      }),
-      missileResultEvent
-    );
+    // Process the missile using the same semaphore used for player actions
+    yield* processMissileWithSemaphore(store, missile, gameId, myPlayer, opponentPlayer, semaphore);
 
     // Log turn completion
-    yield* Effect.log(`🤖 AI Agent turn completed. Next player: ${nextPlayer}`, LogLevel.Info);
+    yield* Effect.log(`🤖 AI Agent turn completed`, LogLevel.Info);
   }).pipe(
     Effect.catchAll((error) =>
       Effect.log('🚨 Agent turn failed completely', LogLevel.Error, error)
     ),
+    Effect.provide(NodeHttpClient.layer),
     Effect.provide(Logger.pretty)
   );
 };
@@ -464,8 +429,8 @@ const main = async () => {
   let lastGameId = '';
   let unsubscribeHandlers: (() => void)[] = [];
 
-  // Create a lock for missile processing to prevent race conditions
-  const missileProcessingLock = await Effect.runPromise(createMissileProcessingLock());
+  // Create a semaphore (1 permit) for missile processing to prevent race conditions
+  const missileProcessingSemaphore = await Effect.runPromise(TSemaphore.make(1));
 
   // Log server start with Effect
   await Effect.runPromise(
@@ -570,15 +535,17 @@ const main = async () => {
             return;
           }
 
-          // Process missile with lock to prevent race conditions
+          // Process missile with semaphore to prevent race conditions
           await Effect.runPromise(
-            processMissileWithLock(
-              store,
-              lastMissile,
-              currentGameId,
-              myPlayer,
-              opponentPlayer,
-              missileProcessingLock
+            (
+              processMissileWithSemaphore(
+                store,
+                lastMissile,
+                currentGameId,
+                myPlayer,
+                opponentPlayer,
+                missileProcessingSemaphore
+              ) as Effect.Effect<void, any, never>
             ).pipe(Effect.provide(Logger.pretty))
           );
         },
@@ -599,10 +566,15 @@ const main = async () => {
           if (game?.currentPlayer === 'player-2') {
             // Run agent turn asynchronously without blocking
             await Effect.runPromise(
-              agentTurn(store, currentGame, 'player-2', 'player-1').pipe(
-                Effect.provide(NodeHttpClient.layer),
-                Effect.provide(Logger.pretty)
-              ) as Effect.Effect<void, any, never>
+              (
+                agentTurn(
+                  store,
+                  currentGame,
+                  'player-2',
+                  'player-1',
+                  missileProcessingSemaphore
+                ) as Effect.Effect<void, any, never>
+              ).pipe(Effect.provide(NodeHttpClient.layer), Effect.provide(Logger.pretty))
             ).catch(async (error) => {
               await Effect.runPromise(
                 Effect.log('Agent turn failed', LogLevel.Error, error).pipe(
