@@ -1,5 +1,5 @@
 import { Effect, pipe, Redacted } from 'effect';
-import * as AiLanguageModel from '@effect/ai/AiLanguageModel';
+import * as AiLanguageModel from '@effect/ai/LanguageModel';
 import * as OpenAiLanguageModel from '@effect/ai-openai/OpenAiLanguageModel';
 import * as OpenAiClient from '@effect/ai-openai/OpenAiClient';
 import { decodeCoordinates } from '@battleship/domain';

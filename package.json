@@ -5,7 +5,7 @@
   "scripts": {
     "build": "turbo run build",
     "build:webapp": "turbo run --filter webapp build",
-    "dev": "turbo run dev",
+    "dev": "env-cmd turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "lint:fix": "turbo run lint:fix",
@@ -16,6 +16,7 @@
     "deploy:server-client": "turbo run --filter server-client deploy"
   },
   "devDependencies": {
+    "env-cmd": "^10.1.0",
     "turbo": "^2.5.6",
     "typescript": "^5.5.4"
   },

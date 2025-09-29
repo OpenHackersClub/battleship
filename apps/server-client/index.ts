@@ -1,6 +1,6 @@
-import { makeAdapter } from '@livestore/adapter-node';
+import { makeAdapter } from '@livestore/adapter-cloudflare';
 import { createStorePromise } from '@livestore/livestore';
-import { makeCfSync } from '@livestore/sync-cf';
+import { makeWsSync } from '@livestore/sync-cf/client';
 import {
   GAME_CONFIG,
   getMissileHitPosition,
@@ -11,7 +11,6 @@ import { pickTargetWithAI } from './strategy';
 import * as OpenAiLanguageModel from '@effect/ai-openai/OpenAiLanguageModel';
 import * as OpenAiClient from '@effect/ai-openai/OpenAiClient';
 import { HttpServer, HttpRouter, HttpServerResponse } from '@effect/platform';
-import { NodeHttpClient } from '@effect/platform-node';
 import { Effect, Option, LogLevel, Logger, Redacted, TSemaphore } from 'effect';
 import { listen } from './server';
 import { events, schema } from '@battleship/schema';
@@ -453,15 +452,17 @@ const agentTurn = (
     Effect.catchAll((error) =>
       Effect.log('🚨 Agent turn failed completely', LogLevel.Error, error)
     ),
-    Effect.provide(NodeHttpClient.layer),
     Effect.provide(Logger.pretty)
   );
 };
 
 const main = async () => {
   const adapter = makeAdapter({
-    storage: { type: 'fs', baseDirectory: 'tmp' },
-    sync: { backend: makeCfSync({ url: LIVESTORE_SYNC_URL }), onSyncError: 'ignore' },
+    storage: context.storage,
+    syncOptions: { backend: makeWsSync({ url: LIVESTORE_SYNC_URL }), onSyncError: 'ignore' },
+    clientId: 'server-client',
+    sessionId: 'server-client',
+    resetPersistence: false,
   });
 
   const storeId = ENV.STORE_ID;
@@ -634,7 +635,7 @@ const main = async () => {
                   'player-1',
                   missileProcessingSemaphore
                 ) as Effect.Effect<void, any, never>
-              ).pipe(Effect.provide(NodeHttpClient.layer), Effect.provide(Logger.pretty))
+              ).pipe(Effect.provide(Logger.pretty))
             ).catch(async (error) => {
               await Effect.runPromise(
                 Effect.log('Agent turn failed', LogLevel.Error, error).pipe(
