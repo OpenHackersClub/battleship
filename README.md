@@ -60,6 +60,71 @@ Currently the sync worker is deployed as Cloudflare Worker
 Server client is deployed at Render on https://battleship-server-client.onrender.com/
 
 
+## Flows
+
+
+Multiple Firing events
+
+```mermaid
+	
+sequenceDiagram	
+	participant C1 as Client1
+	
+	participant C2 as Client2
+	
+	participant SY as Sync Worker
+	
+	participant SC as Server Client
+	
+	participant DS as Data Store
+	
+	
+	%% ---------- Game Setup ----------
+	
+	  
+	
+	C1->>SC: MissileFired id=1
+	
+	C2->>SC: MissileFired id=2 (ignored)
+	
+	  
+	
+	critical Process events
+	
+	  SC->>SY: MissileHit, ActionCompleted
+	
+	option not current turn
+	
+	  SY->>SY: Update Turn & Current Player
+	
+	end
+	
+	SC->>SC: My turn. Fire randomly
+
+  
+```
+
+
+
+Alternative: Local detection
+
+
+```mermaid
+
+sequenceDiagram
+
+participant C1 as Client
+participant SY as Sync Worker
+
+
+C1->>SY: MissileFired
+C1->>C1: check isHit locally
+C1->>SY: MissileFired
+C1->>C1: check isHit locally
+C1->>SY: Commit Multipple Turns
+SC->>SC: My turn. Fire randomly
+```
+
 ### Prerequisites
 
 - Node.js

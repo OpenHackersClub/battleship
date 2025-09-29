@@ -4,13 +4,14 @@ import { queryDb } from '@livestore/livestore';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { events, GamePhase, tables } from '../schema/schema';
+import type { AiPlayerType } from './AiPlayerTypeSelector';
 
 // Re-export the shared game configuration
 export { GAME_CONFIG };
 
 type GameStateContextValue = {
   currentGameId: string | undefined;
-  newGame: () => void;
+  newGame: (aiPlayerType?: AiPlayerType) => void;
 };
 
 const GameStateContext = createContext<GameStateContextValue | undefined>(undefined);
@@ -36,37 +37,41 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         currentGameId: currentGame.id,
         myPlayer: currentGame.players[0],
         opponent: currentGame.players[1],
-        winner: undefined,
+        winner: null,
       });
     }
   }, [currentGame, setState]);
 
   // TODO extxend with matchmaking
-  const newGame = useCallback(() => {
-    const gameId = `game-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const players = Array.from({ length: 2 }, (_, i) => `player-${i + 1}`);
+  const newGame = useCallback(
+    (aiPlayerType: AiPlayerType = 'openai') => {
+      const gameId = `game-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const players = Array.from({ length: 2 }, (_, i) => `player-${i + 1}`);
 
-    const myPlayer = players[0];
-    const opponent = players[1];
+      const myPlayer = players[0];
+      const opponent = players[1];
 
-    console.log('Game Started', gameId, players);
-    store.commit(
-      events.GameStarted({
-        id: gameId,
-        gamePhase: GamePhase.Setup,
-        players,
-        createdAt: new Date(),
-      })
-    );
+      console.log('Game Started', gameId, players, 'AI Type:', aiPlayerType);
+      store.commit(
+        events.GameStarted({
+          id: gameId,
+          gamePhase: GamePhase.Setup,
+          players,
+          aiPlayerType,
+          createdAt: new Date(),
+        })
+      );
 
-    setState({
-      currentGameId: gameId,
-      myPlayer,
-      opponent,
-      myShips: [],
-      winner: undefined,
-    });
-  }, [store.commit, setState]);
+      setState({
+        currentGameId: gameId,
+        myPlayer,
+        opponent,
+        myShips: [],
+        winner: null,
+      });
+    },
+    [store.commit, setState]
+  );
 
   const playerShips = store.useQuery(
     queryDb(

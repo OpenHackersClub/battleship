@@ -22,7 +22,9 @@
     "@livestore/adapter-node": "0.3.1",
     "@livestore/livestore": "0.3.1",
     "@livestore/sync-cf": "0.3.1",
-    "effect": "^3.17.8"
+    "effect": "^3.17.8",
+    "@effect/ai": "^0.26.1",
+    "@effect/ai-openai": "^0.29.1"
   },
   "devDependencies": {
     "@types/node": "^24.2.0",

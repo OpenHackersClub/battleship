@@ -39,6 +39,10 @@ export const tables = {
         nullable: false,
         schema: Schema.parseJson(Schema.Array(Schema.String)),
       }),
+      aiPlayerType: State.SQLite.text({
+        nullable: false,
+        schema: Schema.Literal('openai', 'browserai'),
+      }),
       currentTurn: State.SQLite.integer(),
       currentPlayer: State.SQLite.text(),
 
@@ -119,7 +123,7 @@ export const tables = {
       myPlayer: Schema.String,
       // TODO consider multiplayer
       opponent: Schema.String,
-      winner: Schema.optional(Schema.String),
+      winner: Schema.NullOr(Schema.String),
       myShips: Schema.Array(
         Schema.Struct({
           id: Schema.String,
@@ -137,7 +141,7 @@ export const tables = {
         currentGameId: '',
         myPlayer: '',
         opponent: '',
-        winner: undefined,
+        winner: null,
         myShips: [],
       },
     },
@@ -161,6 +165,7 @@ export const events = {
       id: Schema.String,
       gamePhase: Schema.optional(Schema.Literal('setup', 'playing', 'finished')),
       players: Schema.optional(Schema.Array(Schema.String)),
+      aiPlayerType: Schema.optional(Schema.Literal('openai', 'browserai')),
       createdAt: Schema.optional(Schema.DateFromNumber),
     }),
   }),
@@ -169,6 +174,7 @@ export const events = {
     schema: Schema.Struct({
       id: Schema.String,
       gamePhase: Schema.optional(Schema.Literal('setup', 'playing', 'finished')),
+      aiPlayerType: Schema.optional(Schema.Literal('openai', 'browserai')),
       players: Schema.optional(Schema.Array(Schema.String)),
       createdAt: Schema.optional(Schema.DateFromNumber),
     }),
@@ -238,18 +244,20 @@ export const events = {
 
 // Materializers are used to map events to state (https://docs.livestore.dev/reference/state/materializers)
 const materializers = State.SQLite.materializers(events, {
-  'v1.GameStarted': ({ id, gamePhase, players, createdAt }) =>
+  'v1.GameStarted': ({ id, gamePhase, players, aiPlayerType, createdAt }) =>
     tables.games.insert({
       id,
       gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
       currentTurn: 0,
       currentPlayer: players?.[0] ?? '',
       players: players ?? [],
+      aiPlayerType: aiPlayerType ?? 'openai',
       createdAt: createdAt ?? new Date(),
     }),
-  'v1.GameUpdated': ({ id, gamePhase }) =>
+  'v1.GameUpdated': ({ id, gamePhase, aiPlayerType }) =>
     tables.games.where({ id }).update({
       gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
+      aiPlayerType: aiPlayerType ?? 'openai',
     }),
   'v1.ShipPositionCreated': ({ id, gameId, player, x, y, orientation, length }) =>
     tables.allShips.insert({

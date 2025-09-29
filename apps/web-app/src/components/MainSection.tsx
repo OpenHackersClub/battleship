@@ -9,9 +9,10 @@ import {
 import { useDragDropMonitor } from '@dnd-kit/react';
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import type React from 'react';
-import { useEffect, useMemo } from 'react';
-import { GamePhase, tables } from '../schema/schema';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { events, GamePhase, tables } from '../schema/schema';
 import { GameService } from '../util/gameService';
+import { type AiPlayerType, AiPlayerTypeSelector } from './AiPlayerTypeSelector';
 import { useGameState } from './GameStateProvider';
 import { MySeaGrid } from './MySeaGrid';
 import { OpponentSeaGrid } from './OpponentSeaGrid';
@@ -104,6 +105,9 @@ export const MainSection: React.FC = () => {
   const { store } = useStore();
   const { newGame } = useGameState();
 
+  // AI Player Type selection state
+  const [selectedAiType, setSelectedAiType] = useState<AiPlayerType>('openai');
+
   // Initialize game service
   const gameService = useMemo(() => new GameService(store), [store]);
 
@@ -169,6 +173,28 @@ export const MainSection: React.FC = () => {
     },
   });
 
+  // When using Browser AI and it's the AI's turn, run the agent turn locally
+  const agentRunningRef = useRef(false);
+  useEffect(() => {
+    if (!currentGame) return;
+    if (currentGame.gamePhase !== GamePhase.Playing) return;
+    const aiType = (currentGame.aiPlayerType as AiPlayerType) || 'openai';
+    if (aiType !== 'browserai') return;
+    if (currentGame.currentPlayer !== opponent) return;
+    if (agentRunningRef.current) return;
+
+    agentRunningRef.current = true;
+    gameService.runBrowserAgentTurn({
+      currentGameId: currentGameId || '',
+      myPlayer: opponent,
+      opponent: myPlayer,
+    });
+    const t = setTimeout(() => {
+      agentRunningRef.current = false;
+    }, 500);
+    return () => clearTimeout(t);
+  }, [currentGame, currentGameId, myPlayer, opponent, gameService]);
+
   return (
     <section className="main">
       {winner && (
@@ -196,30 +222,77 @@ export const MainSection: React.FC = () => {
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1 min-w-80">
           <div className="mb-4">
-            <Button onClick={() => newGame()} variant="outline" className="w-full mb-2">
-              🚢 New Game
-            </Button>
-            {currentGame?.gamePhase === GamePhase.Setup && (
-              <Button
-                onClick={() => {
-                  gameService.startGame({
-                    currentGameId: currentGameId || '',
-                    myPlayer,
-                    opponent,
-                    currentGame,
-                  });
-                }}
-                variant="default"
-                size="lg"
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-              >
-                🚀 I'm Ready!
-              </Button>
-            )}
-            {currentGame?.gamePhase === GamePhase.Playing && (
-              <div className="w-full text-center text-green-600 font-semibold py-2 px-4 rounded bg-green-50 border border-green-200">
-                🎮 Game Started
+            {!currentGame && (
+              <div className="space-y-4 mb-4">
+                <AiPlayerTypeSelector
+                  value={selectedAiType}
+                  onChange={setSelectedAiType}
+                  disabled={false}
+                />
+                <Button
+                  onClick={() => newGame(selectedAiType)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  🚢 New Game
+                </Button>
               </div>
+            )}
+
+            {currentGame && (
+              <>
+                <Button
+                  onClick={() => newGame(selectedAiType)}
+                  variant="outline"
+                  className="w-full mb-2"
+                >
+                  🚢 New Game
+                </Button>
+
+                {/* Show AI type selector during game as well */}
+                <div className="mb-4">
+                  <AiPlayerTypeSelector
+                    value={(currentGame.aiPlayerType as AiPlayerType) || selectedAiType}
+                    onChange={(type) => {
+                      setSelectedAiType(type);
+                      // If we're in setup phase, update the game's AI type as well
+                      if (currentGame.gamePhase === GamePhase.Setup && currentGameId) {
+                        store.commit(
+                          events.GameUpdated({
+                            id: currentGameId,
+                            aiPlayerType: type,
+                          })
+                        );
+                      }
+                    }}
+                    disabled={currentGame.gamePhase !== GamePhase.Setup}
+                  />
+                </div>
+
+                {currentGame?.gamePhase === GamePhase.Setup && (
+                  <Button
+                    onClick={() => {
+                      gameService.startGame({
+                        currentGameId: currentGameId || '',
+                        myPlayer,
+                        opponent,
+                        aiPlayerType: currentGame.aiPlayerType || selectedAiType,
+                        currentGame,
+                      });
+                    }}
+                    variant="default"
+                    size="lg"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                  >
+                    🚀 I'm Ready!
+                  </Button>
+                )}
+                {currentGame?.gamePhase === GamePhase.Playing && (
+                  <div className="w-full text-center text-green-600 font-semibold py-2 px-4 rounded bg-green-50 border border-green-200">
+                    🎮 Game Started
+                  </div>
+                )}
+              </>
             )}
           </div>
           {currentGameId && <ActionLog gameId={currentGameId} />}

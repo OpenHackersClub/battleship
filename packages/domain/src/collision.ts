@@ -34,6 +34,12 @@ const COORD_BIT_WIDTH = 8;
 const encodeCoordinates = (pos: { x: number; y: number }): number =>
   (pos.x << COORD_BIT_WIDTH) | pos.y;
 
+// Decode coordinates from a single integer using bit-unpacking: x = key >> B, y = key & mask
+export const decodeCoordinates = (key: number): { x: number; y: number } => ({
+  x: key >> COORD_BIT_WIDTH,
+  y: key & ((1 << COORD_BIT_WIDTH) - 1),
+});
+
 /**
  *
  * Encrypted variant to find intereseciton deterministically
