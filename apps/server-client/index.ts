@@ -220,27 +220,86 @@ const buildStrategyContext = (
 };
 
 // AI strategy function
-const getAiTarget = (apiKey: any, strategyContext: StrategyContext) =>
+const getAiTarget = (
+  apiKey: any,
+  strategyContext: StrategyContext,
+  aiPlayerType: 'openai' | 'browserai'
+) =>
   Effect.gen(function* () {
-    yield* Effect.log('🤖 Using OpenAI-powered strategy...', LogLevel.Info);
-    return yield* pickTargetWithAI({
-      context: strategyContext,
-      apiKey: apiKey,
-      model: 'gpt-4o-mini',
-    }).pipe(
-      Effect.annotateLogs({
-        strategy: 'ai',
+    if (aiPlayerType === 'browserai') {
+      yield* Effect.log('🧠 Using fallback strategy for Browser AI on server...', LogLevel.Info);
+      // Browser AI should run on client side, not server side
+      // This is a fallback for server-side processing
+      return yield* getFallbackTarget(strategyContext).pipe(
+        Effect.annotateLogs({
+          strategy: 'fallback',
+          aiPlayerType: 'browserai',
+          reason: 'browser_ai_on_server',
+          availableTargets: strategyContext.availableTargets.length,
+          opponentHits: strategyContext.opponentHits.length,
+          opponentMisses: strategyContext.opponentMisses.length,
+        })
+      );
+    } else {
+      yield* Effect.log('🌐 Using OpenAI-powered strategy...', LogLevel.Info);
+      return yield* pickTargetWithAI({
+        context: strategyContext,
+        apiKey: apiKey,
         model: 'gpt-4o-mini',
-        availableTargets: strategyContext.availableTargets.length,
-        opponentHits: strategyContext.opponentHits.length,
-        opponentMisses: strategyContext.opponentMisses.length,
-      })
-    );
+      }).pipe(
+        Effect.annotateLogs({
+          strategy: 'openai',
+          model: 'gpt-4o-mini',
+          availableTargets: strategyContext.availableTargets.length,
+          opponentHits: strategyContext.opponentHits.length,
+          opponentMisses: strategyContext.opponentMisses.length,
+        })
+      );
+    }
   });
 
 // Get target coordinate using AI or fallback strategy
-const getTargetCoordinate = (strategyContext: StrategyContext, apiKey: string) => {
+const getTargetCoordinate = (
+  strategyContext: StrategyContext,
+  apiKey: string,
+  aiPlayerType: 'openai' | 'browserai' = 'openai'
+) => {
   return Effect.gen(function* () {
+    if (strategyContext.availableTargets.length === 0) {
+      yield* Effect.log('💡 No targets available, using fallback strategy', LogLevel.Info);
+      return yield* getFallbackTarget(strategyContext).pipe(
+        Effect.annotateLogs({
+          strategy: 'fallback',
+          reason: 'no_targets',
+          aiPlayerType,
+          availableTargets: 0,
+        })
+      );
+    }
+
+    // For browser AI, we don't require an API key since it uses universal strategy
+    if (aiPlayerType === 'browserai') {
+      yield* Effect.log('🧠 Using Browser AI strategy for target selection', LogLevel.Info);
+      return yield* Effect.catchAll(getAiTarget(apiKey, strategyContext, aiPlayerType), (error) => {
+        return Effect.gen(function* () {
+          yield* Effect.log(
+            '⚠️ Browser AI strategy failed, falling back to random strategy',
+            LogLevel.Warning
+          );
+          yield* Effect.log('Browser AI Error details', LogLevel.Error, error);
+          return yield* getFallbackTarget(strategyContext).pipe(
+            Effect.annotateLogs({
+              strategy: 'fallback',
+              reason: 'browser_ai_failed',
+              aiPlayerType,
+              availableTargets: strategyContext.availableTargets.length,
+            })
+          );
+        });
+      });
+    }
+
+    // For OpenAI, check if API key is provided
     const apiKeyOption = apiKey ? Option.some(apiKey) : Option.none();
 
     return yield* Option.match(apiKeyOption, {
@@ -251,43 +310,35 @@ const getTargetCoordinate = (strategyContext: StrategyContext, apiKey: string) =
             Effect.annotateLogs({
               strategy: 'fallback',
               reason: 'no_api_key',
+              aiPlayerType,
               availableTargets: strategyContext.availableTargets.length,
             })
           );
         });
       },
       onSome: (apiKey) => {
-        if (strategyContext.availableTargets.length === 0) {
-          return Effect.gen(function* () {
-            yield* Effect.log('💡 No targets available, using fallback strategy', LogLevel.Info);
-            return yield* getFallbackTarget(strategyContext).pipe(
-              Effect.annotateLogs({
-                strategy: 'fallback',
-                reason: 'no_targets',
-                availableTargets: 0,
-              })
-            );
-          });
-        }
-
         return Effect.gen(function* () {
-          yield* Effect.log('🤖 Using AI strategy for target selection', LogLevel.Info);
-          return yield* Effect.catchAll(getAiTarget(apiKey, strategyContext), (error) => {
-            return Effect.gen(function* () {
-              yield* Effect.log(
-                '⚠️ AI strategy failed, falling back to random strategy',
-                LogLevel.Warning
-              );
-              yield* Effect.log('AI Error details', LogLevel.Error, error);
-              return yield* getFallbackTarget(strategyContext).pipe(
-                Effect.annotateLogs({
-                  strategy: 'fallback',
-                  reason: 'ai_failed',
-                  availableTargets: strategyContext.availableTargets.length,
-                })
-              );
-            });
-          });
+          yield* Effect.log('🌐 Using OpenAI strategy for target selection', LogLevel.Info);
+          return yield* Effect.catchAll(
+            getAiTarget(apiKey, strategyContext, aiPlayerType),
+            (error) => {
+              return Effect.gen(function* () {
+                yield* Effect.log(
+                  '⚠️ OpenAI strategy failed, falling back to random strategy',
+                  LogLevel.Warning
+                );
+                yield* Effect.log('OpenAI Error details', LogLevel.Error, error);
+                return yield* getFallbackTarget(strategyContext).pipe(
+                  Effect.annotateLogs({
+                    strategy: 'fallback',
+                    reason: 'openai_failed',
+                    aiPlayerType,
+                    availableTargets: strategyContext.availableTargets.length,
+                  })
+                );
+              });
+            }
+          );
         });
       },
     });
@@ -348,13 +399,17 @@ const agentTurn = (
     // Get API key from environment
     const apiKey = (globalThis as any)?.process?.env?.VITE_OPENAI_API_KEY || '';
 
+    // Get the aiPlayerType from the current game, defaulting to 'openai' for backward compatibility
+    const aiPlayerType = (currentGame.aiPlayerType as 'openai' | 'browserai') || 'openai';
+
     // Get target coordinate using AI or fallback strategy
-    const coordinate = yield* getTargetCoordinate(strategyContext, apiKey).pipe(
+    const coordinate = yield* getTargetCoordinate(strategyContext, apiKey, aiPlayerType).pipe(
       Effect.withLogSpan('strategy_selection'),
       Effect.annotateLogs({
         gameId: gameId,
         player: myPlayer,
         opponentPlayer: opponentPlayer,
+        aiPlayerType: aiPlayerType,
         gridSize: `${strategyContext.gridSize.rowSize}x${strategyContext.gridSize.colSize}`,
       }),
       Effect.provide(Logger.pretty),
@@ -562,6 +617,11 @@ const main = async () => {
               yield* Effect.log(`Next player: ${game?.currentPlayer}`, LogLevel.Info);
             }).pipe(Effect.provide(Logger.pretty))
           );
+
+          // When using Browser AI, agent turns run on the client. Skip server agent turn.
+          if (game?.aiPlayerType === 'browserai') {
+            return;
+          }
 
           if (game?.currentPlayer === 'player-2') {
             // Run agent turn asynchronously without blocking
