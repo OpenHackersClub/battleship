@@ -24,6 +24,7 @@ export const allGames$ = () =>
 export const currentGame$ = () =>
   queryDb(
     tables.games.orderBy('createdAt', 'desc').first({
+      behaviour: 'fallback',
       fallback: () => null,
     }),
     {
@@ -81,6 +82,7 @@ export const lastMissile$ = (gameId: string, player: string) =>
       .where('player', player)
       .orderBy('createdAt', 'desc')
       .first({
+        behaviour: 'fallback',
         fallback: () => null,
       }),
     {
@@ -115,7 +117,7 @@ export const lastAction$ = (gameId: string) =>
     tables.actions
       .where('gameId', gameId)
       .orderBy('turn', 'desc')
-      .first({ fallback: () => null }),
+      .first({ behaviour: 'fallback', fallback: () => null }),
     {
       deps: [gameId],
       label: `actions@${gameId}-last`,

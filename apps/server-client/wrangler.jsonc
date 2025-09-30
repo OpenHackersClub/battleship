@@ -1,0 +1,12 @@
+{
+  "name": "server-client",
+  "main": "./index.ts",
+  "compatibility_date": "2025-05-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "dev": {
+    "port": 8788
+  },
+  "vars": {
+    "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
+  }
+}

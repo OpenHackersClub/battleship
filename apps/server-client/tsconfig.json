@@ -15,12 +15,13 @@
       "noUnusedParameters": true,
       "erasableSyntaxOnly": false,
       "noUncheckedSideEffectImports": true,
-      "types": ["node"],
+      "types": ["@cloudflare/workers-types"],
       /* Path mapping */
       "baseUrl": ".",
       "paths": {
         "@/*": ["./src/*"]
       },
+      
       /* Linting */
       "strict": true,
       "strictNullChecks": true,
