@@ -1,6 +1,5 @@
-import { makeAdapter } from '@livestore/adapter-cloudflare';
-import { createStorePromise } from '@livestore/livestore';
-import { makeWsSync } from '@livestore/sync-cf/client';
+import { createStoreDoPromise } from '@livestore/adapter-cloudflare';
+import type { DurableObjectState, ExecutionContext } from '@cloudflare/workers-types';
 import {
   GAME_CONFIG,
   getMissileHitPosition,
@@ -456,15 +455,7 @@ const agentTurn = (
   );
 };
 
-const main = async () => {
-  const adapter = makeAdapter({
-    storage: context.storage,
-    syncOptions: { backend: makeWsSync({ url: LIVESTORE_SYNC_URL }), onSyncError: 'ignore' },
-    clientId: 'server-client',
-    sessionId: 'server-client',
-    resetPersistence: false,
-  });
-
+const main = async (context: DurableObjectState, env: any) => {
   const storeId = ENV.STORE_ID;
   if (!storeId) {
     throw new Error(
@@ -472,11 +463,18 @@ const main = async () => {
     );
   }
 
-  // necessary to use same store id across all clients
-  const store = await createStorePromise({
-    adapter,
+  // Create store using Durable Object adapter
+  const store = await createStoreDoPromise({
     schema,
     storeId,
+    clientId: 'server-client',
+    sessionId: 'server-client-session',
+    durableObject: {
+      ctx: context,
+      env: env,
+      bindingName: 'SERVER_CLIENT_DO',
+    },
+    syncBackendStub: env.SYNC_BACKEND_DO?.get(env.SYNC_BACKEND_DO.idFromName(storeId)),
     syncPayload: { authToken: 'insecure-token-change-me' },
   });
 
@@ -695,11 +693,43 @@ const main = async () => {
   });
 };
 
+// Durable Object class for server-client
+export class ServerClientDO {
+  constructor(
+    private state: DurableObjectState,
+    private env: any
+  ) {}
+
+  async fetch(request: Request): Promise<Response> {
+    // Initialize on first request
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    return new Response('Server Client DO', { status: 200 });
+  }
+
+  private initialized = false;
+
+  private async initialize() {
+    await main(this.state, this.env);
+    this.initialized = true;
+  }
+}
+
 // Define the router with a single route for the root URL
 const router = HttpRouter.empty.pipe(HttpRouter.get('/health', HttpServerResponse.text('ok')));
 // Set up the application server with logging
 const app = router.pipe(HttpServer.serve(), HttpServer.withLogAddress);
 
-listen(app, PORT);
+// Export default worker handler
+export default {
+  async fetch(request: Request, env: any, ctx: ExecutionContext): Promise<Response> {
+    // Get or create Durable Object instance
+    const id = env.SERVER_CLIENT_DO.idFromName('singleton');
+    const stub = env.SERVER_CLIENT_DO.get(id);
+    return stub.fetch(request);
+  },
+};
 
-main().catch(console.error);
+// Start the HTTP server
+listen(app, PORT);

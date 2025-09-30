@@ -1,5 +1,5 @@
 import { makeWorker } from '@livestore/adapter-web/worker';
-import { makeCfSync } from '@livestore/sync-cf';
+import { makeCfSync } from '@livestore/sync-cf/client';
 import { schema } from './schema/schema';
 
 const VITE_LIVESTORE_SYNC_URL = import.meta.env.VITE_LIVESTORE_SYNC_URL || 'ws://localhost:8787';
@@ -10,6 +10,6 @@ makeWorker({
     backend: makeCfSync({
       url: VITE_LIVESTORE_SYNC_URL,
     }),
-    initialSyncOptions: { _tag: 'Blocking', timeout: 5000 },
+    initialSyncOptions: { _tag: 'NonBlocking' },
   },
 });

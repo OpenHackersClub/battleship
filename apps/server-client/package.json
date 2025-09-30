@@ -7,7 +7,7 @@
     "build": "tsc --build",
     "dev": "vite dev",
     "dev:watch": "vite-node --watch index.ts",
-    "start": "tsx index.ts",
+    "start": "tsx src/index.ts",
     "test": "vitest"
   },
   "keywords": [],

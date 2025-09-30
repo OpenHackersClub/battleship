@@ -1,12 +1,45 @@
 {
   "name": "server-client",
-  "main": "./index.ts",
+  "main": "./src/index.ts",
   "compatibility_date": "2025-05-08",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "enable_request_signal"],
   "dev": {
     "port": 8788
   },
   "vars": {
     "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
-  }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SERVER_CLIENT_DO",
+        "class_name": "ServerClientDO"
+      },
+      {
+        "name": "SYNC_BACKEND_DO",
+        "class_name": "WebSocketServer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": [
+        "ServerClientDO",
+        "WebSocketServer"
+      ]
+    }
+  ],
+    // D1 Databases
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "battleship",
+        "database_id": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec",
+      },
+    ],
+    "observability": {
+      "enabled": true,
+    },
+
 }
