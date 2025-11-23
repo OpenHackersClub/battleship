@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --build",
-    "dev": "vite dev",
+    "dev": "wrangler -c ./wrangler.jsonc dev ",
     "dev:watch": "vite-node --watch index.ts",
     "start": "tsx src/index.ts",
     "test": "vitest"
@@ -17,23 +17,22 @@
   "dependencies": {
     "@battleship/domain": "workspace:^",
     "@battleship/schema": "workspace:^",
-    "@effect/ai": "^0.28.0",
-    "@effect/ai-openai": "^0.30.0",
-    "@effect/platform": "^0.90.6",
-    "@livestore/adapter-cloudflare": "0.4.0-dev.9",
-    "@livestore/livestore": "0.4.0-dev.9",
-    "@livestore/sync-cf": "0.4.0-dev.9",
-    "effect": "^3.17.8"
+    "@effect/ai": "^0.32.1",
+    "@effect/ai-openai": "^0.35.0",
+    "@effect/platform": "^0.93.3",
+    "@livestore/adapter-cloudflare": "0.4.0-dev.17",
+    "@livestore/livestore": "0.4.0-dev.17",
+    "@livestore/sync-cf": "0.4.0-dev.17",
+    "effect": "^3.19.6"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.13.7",
     "@types/node": "^24.2.0",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2",
-    "vite": "^6.3.4",
+    "vite": "^7.1.7",
     "vite-node": "^3.2.4",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4",
-    "wrangler": "^4.40.2"
+    "wrangler": "^4.40.3"
   }
 }

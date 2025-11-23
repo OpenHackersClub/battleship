@@ -169,7 +169,7 @@ export const events = {
       id: Schema.String,
       gamePhase: Schema.optional(Schema.Literal('setup', 'playing', 'finished')),
       players: Schema.optional(Schema.Array(Schema.String)),
-      aiPlayerType: Schema.Literal('openai', 'browserai'),
+      aiPlayerType: Schema.optional(Schema.Literal('openai', 'browserai')),
       createdAt: Schema.optional(Schema.DateFromNumber),
     }),
   }),
@@ -178,7 +178,7 @@ export const events = {
     schema: Schema.Struct({
       id: Schema.String,
       gamePhase: Schema.optional(Schema.Literal('setup', 'playing', 'finished')),
-      aiPlayerType: Schema.Literal('openai', 'browserai'),
+      aiPlayerType: Schema.optional(Schema.Literal('openai', 'browserai')),
       players: Schema.optional(Schema.Array(Schema.String)),
       createdAt: Schema.optional(Schema.DateFromNumber),
     }),
@@ -252,16 +252,16 @@ const materializers = State.SQLite.materializers(events, {
     tables.games.insert({
       id,
       gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
-      aiPlayerType,
       currentTurn: 0,
       currentPlayer: players?.[0] ?? '',
       players: players ?? [],
+      aiPlayerType: aiPlayerType ?? 'openai',
       createdAt: createdAt ?? new Date(),
     }),
   'v1.GameUpdated': ({ id, gamePhase, aiPlayerType }) =>
     tables.games.where({ id }).update({
       gamePhase: (gamePhase ?? 'setup') as 'setup' | 'playing' | 'finished',
-      aiPlayerType,
+      aiPlayerType: aiPlayerType ?? 'openai',
     }),
   'v1.ShipPositionCreated': ({ id, gameId, player, x, y, orientation, length }) =>
     tables.allShips.insert({

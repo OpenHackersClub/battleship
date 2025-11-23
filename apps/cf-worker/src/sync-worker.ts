@@ -1,5 +1,4 @@
-import { type ExecutionContext, WorkerEntrypoint } from 'cloudflare:workers';
-import { type Env, makeDurableObject, makeWorker } from '@livestore/sync-cf/cf-worker';
+import { makeDurableObject, makeWorker } from '@livestore/sync-cf/cf-worker';
 
 export class WebSocketServer extends makeDurableObject({
   onPush: async (message) => {
@@ -11,7 +10,7 @@ export class WebSocketServer extends makeDurableObject({
 }) {}
 
 export default makeWorker({
-  validatePayload: (payload: any) => {
+  validatePayload: (payload: unknown) => {
     console.log('payload ', payload);
 
     // Handle null, undefined, or empty payload
@@ -24,9 +23,10 @@ export default makeWorker({
       throw new Error('Invalid payload format');
     }
 
-    if (payload?.authToken !== 'insecure-token-change-me') {
+    if ((payload as Record<string, unknown>)?.authToken !== 'insecure-token-change-me') {
       throw new Error('Invalid auth token');
     }
   },
+  syncBackendBinding: 'WEBSOCKET_SERVER',
   enableCORS: true,
 });

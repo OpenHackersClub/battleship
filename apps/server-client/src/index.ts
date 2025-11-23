@@ -1,4 +1,5 @@
 import { createStoreDoPromise } from '@livestore/adapter-cloudflare';
+import { makeDurableObject } from '@livestore/sync-cf/cf-worker';
 import type { DurableObjectState, ExecutionContext } from '@cloudflare/workers-types';
 import {
   GAME_CONFIG,
@@ -11,7 +12,6 @@ import * as OpenAiLanguageModel from '@effect/ai-openai/OpenAiLanguageModel';
 import * as OpenAiClient from '@effect/ai-openai/OpenAiClient';
 import { HttpServer, HttpRouter, HttpServerResponse } from '@effect/platform';
 import { Effect, Option, LogLevel, Logger, Redacted, TSemaphore } from 'effect';
-import { listen } from './server';
 import { events, schema } from '@battleship/schema';
 
 import {
@@ -716,10 +716,15 @@ export class ServerClientDO {
   }
 }
 
-// Define the router with a single route for the root URL
-const router = HttpRouter.empty.pipe(HttpRouter.get('/health', HttpServerResponse.text('ok')));
-// Set up the application server with logging
-const app = router.pipe(HttpServer.serve(), HttpServer.withLogAddress);
+// Export WebSocketServer Durable Object for sync backend
+export class WebSocketServer extends makeDurableObject({
+  onPush: async (message) => {
+    console.log('onPush', message.batch);
+  },
+  onPull: async (message) => {
+    console.log('onPull', message);
+  },
+}) {}
 
 // Export default worker handler
 export default {
@@ -730,6 +735,3 @@ export default {
     return stub.fetch(request);
   },
 };
-
-// Start the HTTP server
-listen(app, PORT);

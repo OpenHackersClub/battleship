@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.13.7",
-    "@livestore/sync-cf": "^0.4.0-dev.9",
+    "@livestore/sync-cf": "0.4.0-dev.17",
     "hono": "^4.9.2"
   },
   "devDependencies": {
@@ -22,8 +22,8 @@
     "@cloudflare/containers": "^0.0.19",
     "@cloudflare/workers-types": "^4.20250620.0",
     "typescript": "^5.8.3",
-    "vite": "^6.3.4",
+    "vite": "^7.1.7",
     "vitest": "^2.1.8",
-    "wrangler": "^4.26.0"
+    "wrangler": "^4.40.3"
   }
 }
