@@ -1,4 +1,4 @@
-import { areAllShipsSunk } from '@battleship/domain';
+import { areAllShipsSunk, getShipPositions } from '@battleship/domain';
 import {
   allMissiles$,
   currentGame$,
@@ -21,17 +21,34 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 
-export const PlayerTitle = ({ playerName }: { playerName: string }) => {
+export const PlayerTitle = ({
+  playerName,
+  shipsRemaining,
+  isWinner,
+}: {
+  playerName: string;
+  shipsRemaining?: number;
+  isWinner?: boolean;
+}) => {
   return (
-    <div className="mt-4 flex justify-center items-center gap-3 ">
-      <Avatar>
+    <div className={`mb-3 flex flex-col items-center gap-2 p-3 rounded-lg ${isWinner ? 'bg-gradient-to-r from-yellow-100 to-amber-100 animate-winner-pulse' : ''}`}>
+      <Avatar className={`h-12 w-12 ${isWinner ? 'animate-winner ring-4 ring-yellow-400' : ''}`}>
         <AvatarImage
           src={`https://api.dicebear.com/8.x/identicon/svg?seed=${playerName}`}
           alt={playerName}
         />
         <AvatarFallback>{playerName.slice(0, 2)}</AvatarFallback>
       </Avatar>
-      <div className="text-sm font-medium">{playerName}</div>
+      <div className={`text-sm font-semibold ${isWinner ? 'text-amber-700 animate-winner' : ''}`}>
+        {isWinner && '🏆 '}
+        {playerName}
+        {isWinner && ' 🏆'}
+      </div>
+      {shipsRemaining !== undefined && (
+        <div className="text-xs text-gray-600">
+          🚢 {shipsRemaining} ships remaining
+        </div>
+      )}
     </div>
   );
 };
@@ -195,26 +212,51 @@ export const MainSection: React.FC = () => {
     return () => clearTimeout(t);
   }, [currentGame, currentGameId, myPlayer, opponent, gameService]);
 
+  // Helper function to count ships alive for a player
+  const countShipsAlive = useMemo(() => {
+    if (!myShips || !opponentShips || !myMissileResults || !opponentMissileResults) {
+      return { myShipsAlive: 0, opponentShipsAlive: 0 };
+    }
+
+    const countAlive = (ships: typeof myShips, missileResults: typeof myMissileResults) => {
+      if (!ships || ships.length === 0) return 0;
+
+      const hitPositions = new Set(
+        missileResults.filter((result) => result.isHit).map((result) => `${result.x},${result.y}`)
+      );
+
+      return ships.filter((ship) => {
+        const shipPositions = getShipPositions(ship);
+        return !shipPositions.every((pos) => hitPositions.has(`${pos.x},${pos.y}`));
+      }).length;
+    };
+
+    return {
+      myShipsAlive: countAlive(myShips, opponentMissileResults || []),
+      opponentShipsAlive: countAlive(opponentShips, myMissileResults || []),
+    };
+  }, [myShips, opponentShips, myMissileResults, opponentMissileResults]);
+
   return (
     <section className="main">
-      {winner && (
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-4 mb-4 rounded-lg text-center">
-          <h2 className="text-2xl font-bold">
-            🎉 Game Over! {winner === myPlayer ? 'You Win!' : `${winner} Wins!`} 🎉
-          </h2>
-          <p className="text-lg mt-2">All ships have been sunk!</p>
-        </div>
-      )}
       <div className="flex gap-4 justify-center items-start p-4 w-full max-w-7xl mx-auto">
         <div className="flex-1 min-w-80">
+          <PlayerTitle
+            playerName={myPlayer}
+            shipsRemaining={currentGame?.gamePhase === GamePhase.Playing ? countShipsAlive.myShipsAlive : undefined}
+            isWinner={winner === myPlayer}
+          />
           <MySeaGrid player={myPlayer} />
-          <PlayerTitle playerName={myPlayer} />
           {currentGameId && <ShipDisplay ships={[...(myShips || [])]} title="My Ships" />}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1 min-w-80">
+          <PlayerTitle
+            playerName={opponent}
+            shipsRemaining={currentGame?.gamePhase === GamePhase.Playing ? countShipsAlive.opponentShipsAlive : undefined}
+            isWinner={winner === opponent}
+          />
           <OpponentSeaGrid player={opponent} />
-          <PlayerTitle playerName={opponent} />
           {currentGameId && (
             <ShipDisplay ships={[...(opponentShips || [])]} title={`${opponent}'s Ships`} />
           )}

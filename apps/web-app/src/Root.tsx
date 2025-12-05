@@ -1,4 +1,4 @@
-import { schema } from '@battleship/schema';
+import { schema } from './schema/schema';
 import { makePersistedAdapter } from '@livestore/adapter-web';
 import LiveStoreSharedWorker from '@livestore/adapter-web/shared-worker?sharedworker';
 import { LiveStoreProvider } from '@livestore/react';

@@ -81,8 +81,8 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
   }> = [
     {
       value: 'openai' as const,
-      label: '🌐 OpenAI',
-      description: 'GPT-4o-mini - Cloud AI (requires API key)',
+      label: '☁️ Cloudflare AI',
+      description: 'Llama 3.3 - Cloud AI powered by Cloudflare Workers AI',
       isAvailable: true,
     },
     {
@@ -100,7 +100,9 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
       <div className="space-y-2">
         <h3 className="text-sm font-medium">🤖 AI Opponent Type</h3>
         <div className="grid gap-2">
-          {aiOptions.map((option) => (
+          {aiOptions.map((option) => {
+            const isDisabled = disabled || (option.isAvailable === false && !option.isDownloadable);
+            return (
             <label
               key={option.value}
               className={`
@@ -109,6 +111,11 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
                 ${value === option.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
                 ${disabled ? 'cursor-not-allowed opacity-75' : ''}
               `}
+              onClick={() => {
+                if (!isDisabled) {
+                  onChange(option.value);
+                }
+              }}
             >
               <input
                 type="radio"
@@ -116,7 +123,7 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
                 value={option.value}
                 checked={value === option.value}
                 onChange={(e) => onChange(e.target.value as AiPlayerType)}
-                disabled={disabled || (option.isAvailable === false && !option.isDownloadable)}
+                disabled={isDisabled}
                 className="sr-only"
               />
               <div className="flex-1 min-w-0">
@@ -130,6 +137,11 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
                   {option.isDownloading && (
                     <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
                       Downloading...
+                    </span>
+                  )}
+                  {option.value === 'browserai' && option.isAvailable && (
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                      Ready
                     </span>
                   )}
                   {option.isAvailable === false &&
@@ -150,7 +162,8 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
               </div>
               {value === option.value && <div className="h-2 w-2 bg-blue-500 rounded-full" />}
             </label>
-          ))}
+          );
+          })}
         </div>
       </div>
 
@@ -204,7 +217,7 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
               <div className="text-xs text-yellow-800">
                 <p className="font-medium">Browser AI not available</p>
                 <p className="mt-1">
-                  Requires Chrome 138+ with AI origin trial enabled. The game will use OpenAI as
+                  Requires Chrome 138+ with AI origin trial enabled. The game will use Cloudflare AI as
                   fallback.
                 </p>
               </div>

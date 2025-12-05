@@ -7,7 +7,6 @@
   // Secrets configuration
   "secrets_store_secrets": [],
 
-
   "dev":{
     "port": 8787
   },
@@ -19,23 +18,34 @@
     "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
   },
 
+  // AI binding for Cloudflare Workers AI
+  "ai": {
+    "binding": "AI"
+  },
+
   // Durable Objects
   "durable_objects": {
     "bindings": [
       {
         "name": "WEBSOCKET_SERVER",
         "class_name": "WebSocketServer"
+      },
+      {
+        "name": "SERVER_CLIENT_DO",
+        "class_name": "ServerClientDO"
       }
-    ],
+    ]
   },
 
   // Migrations
   "migrations": [
     {
       "tag": "v1",
-      "new_classes":[
-       "WebSocketServer" 
-      ]
+      "new_sqlite_classes": ["WebSocketServer"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["ServerClientDO"]
     }
   ],
 
@@ -44,10 +54,10 @@
     {
       "binding": "DB",
       "database_name": "battleship",
-      "database_id": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec",
-    },
+      "database_id": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
+    }
   ],
   "observability": {
-    "enabled": true,
-  },
+    "enabled": true
+  }
 }
