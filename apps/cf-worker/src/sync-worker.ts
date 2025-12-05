@@ -1,5 +1,5 @@
-import { makeDurableObject, makeWorker } from '@livestore/sync-cf/cf-worker';
 import type { ExecutionContext, Fetcher } from '@cloudflare/workers-types';
+import { makeDurableObject, makeWorker } from '@livestore/sync-cf/cf-worker';
 
 // Re-export ServerClientDO from dedicated file
 export { ServerClientDO } from './server-client-do';

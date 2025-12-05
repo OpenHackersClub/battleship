@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@battleship/agent": "workspace:^",
     "@battleship/domain": "workspace:^",
     "@battleship/schema": "workspace:^",
     "@dnd-kit/abstract": "^0.1.21",

@@ -1,4 +1,3 @@
-import { schema } from './schema/schema';
 import { makePersistedAdapter } from '@livestore/adapter-web';
 import LiveStoreSharedWorker from '@livestore/adapter-web/shared-worker?sharedworker';
 import { LiveStoreProvider } from '@livestore/react';
@@ -10,6 +9,7 @@ import { GameStateProvider } from './components/GameStateProvider';
 import { Header } from './components/Header';
 import { MainSection } from './components/MainSection';
 import LiveStoreWorker from './livestore.worker?worker';
+import { schema } from './schema/schema';
 import { getStoreId } from './util/store-id';
 
 const AppBody: React.FC = () => (

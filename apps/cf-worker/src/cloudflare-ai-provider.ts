@@ -1,13 +1,15 @@
-import type { Ai } from '@cloudflare/workers-types';
-import type { StrategyContext } from '@battleship/domain';
 import {
+  type AgentAIProvider,
   type AIProvider,
-  type TargetResult,
+  type Coordinate,
   generateBattleshipPrompt,
   getRandomCoordinate,
   parseAIResponse,
+  type TargetResult,
 } from '@battleship/agent';
-import { Effect } from 'effect';
+import type { StrategyContext } from '@battleship/domain';
+import type { Ai } from '@cloudflare/workers-types';
+import { Effect, LogLevel } from 'effect';
 
 /**
  * Cloudflare Workers AI implementation of the AIProvider interface
@@ -57,7 +59,40 @@ export class CloudflareAIProvider implements AIProvider {
 }
 
 /**
+ * Cloudflare Workers AI implementation of the AgentAIProvider interface.
+ * This is used by the refactored agentTurn function.
+ */
+export class CloudflareAgentAIProvider implements AgentAIProvider {
+  constructor(private ai: Ai) {}
+
+  selectTarget(strategyContext: StrategyContext): Effect.Effect<Coordinate | null, unknown, never> {
+    return Effect.gen(
+      function* (this: CloudflareAgentAIProvider) {
+        yield* Effect.log('🌐 Using Cloudflare Workers AI strategy...', LogLevel.Info);
+
+        const provider = new CloudflareAIProvider(this.ai);
+        const result = yield* Effect.tryPromise({
+          try: () => provider.selectTarget(strategyContext),
+          catch: (error) => error,
+        });
+
+        return result?.coordinate || null;
+      }.bind(this)
+    ).pipe(
+      Effect.annotateLogs({
+        strategy: 'cloudflare-ai',
+        model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+        availableTargets: strategyContext.availableTargets.length,
+        opponentHits: strategyContext.opponentHits.length,
+        opponentMisses: strategyContext.opponentMisses.length,
+      })
+    );
+  }
+}
+
+/**
  * Effect-based wrapper for AI target selection
+ * @deprecated Use CloudflareAgentAIProvider with agentTurn instead
  */
 export const pickTargetWithAI = ({
   context,

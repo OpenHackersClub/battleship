@@ -2,7 +2,19 @@
 interface LanguageModelSession {
   prompt(
     input: string,
-    options?: { signal?: AbortSignal; outputLanguage?: string }
+    options?: {
+      signal?: AbortSignal;
+      outputLanguage?: string;
+      responseConstraint?: {
+        type: string;
+        properties?: Record<string, any>;
+        required?: string[];
+        additionalProperties?: boolean;
+        items?: any;
+        maxItems?: number;
+        pattern?: string;
+      };
+    }
   ): Promise<string>;
   promptStreaming(
     input: string,
@@ -167,21 +179,31 @@ export const generateObjectWithBrowserAI = async <A>(options: {
   });
 
   try {
-    const structuredPrompt = `${options.prompt}
+    // JSON Schema for the expected response structure
+    const schema = {
+      type: 'object',
+      properties: {
+        x: {
+          type: 'number',
+        },
+        y: {
+          type: 'number',
+        },
+        reasoning: {
+          type: 'string',
+        },
+      },
+      required: ['x', 'y'],
+      additionalProperties: false,
+    };
 
-You must respond with a valid JSON object that matches this structure:
-{
-  "x": number,
-  "y": number,
-  "reasoning": string
-}`;
-
-    const response = await session.prompt(structuredPrompt, {
+    const response = await session.prompt(options.prompt, {
       outputLanguage: 'en',
+      responseConstraint: schema,
     });
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    const jsonString = jsonMatch ? jsonMatch[0] : response;
-    const parsed = JSON.parse(jsonString);
+
+    // The API returns valid JSON directly when using responseConstraint
+    const parsed = JSON.parse(response);
     return { value: parsed as A };
   } finally {
     session.destroy();

@@ -1,25 +1,16 @@
-import { createStoreDoPromise } from '@livestore/adapter-cloudflare';
-import type { DurableObjectState, Ai } from '@cloudflare/workers-types';
-import { GAME_CONFIG } from '@battleship/domain';
-import {
-  processMissile,
-  buildStrategyContext,
-  buildAvailableTargets,
-  getRandomCoordinate,
-  type StrategyContext,
-} from '@battleship/agent';
-import { pickTargetWithAI } from './cloudflare-ai-provider';
-import { Effect, LogLevel, Logger, TSemaphore } from 'effect';
+import { agentTurn, processMissileWithSemaphore, type StoreAdapter } from '@battleship/agent';
 import { events, schema } from '@battleship/schema';
 import {
   currentGame$,
-  missiles$,
-  opponentShips$,
   lastAction$,
   missileResultsById$,
-  allMissiles$,
-  missileResults$,
+  missiles$,
 } from '@battleship/schema/queries';
+import type { Ai, DurableObjectState } from '@cloudflare/workers-types';
+import { createStoreDoPromise } from '@livestore/adapter-cloudflare';
+import { Effect, Logger, LogLevel, TSemaphore } from 'effect';
+import { CloudflareAgentAIProvider } from './cloudflare-ai-provider';
+import { CloudflareStoreAdapter } from './store-adapter-cloudflare';
 
 // Environment configuration
 const ENV = {
@@ -38,260 +29,62 @@ const ENV = {
 const LIVESTORE_SYNC_URL = ENV.LIVESTORE_SYNC_URL;
 const PORT = ENV.PORT;
 
-// Semaphore-based missile processing to prevent race conditions
-const processMissileWithSemaphore = (
-  store: ReturnType<typeof createStoreDoPromise> extends Promise<infer T> ? T : never,
+// Helper type for Livestore instance
+type LiveStoreInstance = ReturnType<typeof createStoreDoPromise> extends Promise<infer T>
+  ? T
+  : never;
+
+/**
+ * Helper function to process a missile using the store adapter.
+ * This wraps the platform-agnostic processMissileWithSemaphore with Cloudflare-specific store.
+ */
+const processMissileWithStore = (
+  store: LiveStoreInstance,
   lastMissile: { id: string; x: number; y: number; player: string },
   currentGameId: string,
   myPlayer: string,
   opponentPlayer: string,
   semaphore: TSemaphore.TSemaphore
 ) => {
-  return Effect.gen(function* () {
-    return yield* TSemaphore.withPermit(semaphore)(
-      Effect.gen(function* () {
-        // Get opponent ships to check for collision
-        const opponentShips = opponentPlayer
-          ? (store as any).query(opponentShips$(currentGameId, opponentPlayer))
-          : [];
-
-        // Process missile to determine hit/miss and create result event
-        const { missileResultEvent, nextPlayer } = processMissile(
-          lastMissile,
-          opponentShips || [],
-          currentGameId,
-          myPlayer,
-          opponentPlayer
-        );
-
-        const lastAction = (store as any).query(lastAction$(currentGameId)) as {
-          turn?: number;
-        } | null;
-        const missileResult = (store as any).query(
-          missileResultsById$(currentGameId, lastMissile.id)
-        ) as unknown[];
-
-        yield* Effect.log('Missile result processed', LogLevel.Debug, missileResult);
-
-        if (missileResult?.length > 0) {
-          return;
-        }
-
-        const newTurn = (lastAction?.turn ?? 0) + 1;
-
-        // Workaround issue https://github.com/livestorejs/livestore/issues/577 by committing on next tick
-        // but still inside the semaphore critical section to avoid duplicates
-        yield* Effect.sleep(1);
-        // Fire either MissileHit or MissileMiss event based on collision result
-        (store as any).commit(
-          events.ActionCompleted({
-            id: crypto.randomUUID(),
-            gameId: currentGameId,
-            player: myPlayer,
-            turn: newTurn,
-            nextPlayer: nextPlayer,
-          }),
-          missileResultEvent
-        );
-      })
-    );
-  });
+  const storeAdapter = new CloudflareStoreAdapter(store);
+  return processMissileWithSemaphore(
+    storeAdapter,
+    lastMissile,
+    currentGameId,
+    myPlayer,
+    opponentPlayer,
+    semaphore
+  );
 };
 
-// Fallback strategy function
-const getFallbackTarget = (strategyContext: StrategyContext) => {
-  const availableTargets = strategyContext.availableTargets;
-
-  if (availableTargets.length === 0) {
-    return Effect.gen(function* () {
-      yield* Effect.log('🎲 No targets available for fallback strategy', LogLevel.Warning);
-      return null;
-    });
-  }
-
-  // Simple random selection as fallback
-  const selectedTarget = getRandomCoordinate(availableTargets);
-  if (selectedTarget) {
-    return Effect.gen(function* () {
-      yield* Effect.log(
-        `🎲 Using random fallback strategy: (${selectedTarget.x}, ${selectedTarget.y})`,
-        LogLevel.Info
-      );
-      return selectedTarget;
-    });
-  }
-  return Effect.succeed(null);
-};
-
-// AI strategy function using Cloudflare Workers AI
-const getAiTarget = (ai: Ai, strategyContext: StrategyContext) =>
-  Effect.gen(function* () {
-    yield* Effect.log('🌐 Using Cloudflare Workers AI strategy...', LogLevel.Info);
-    return yield* pickTargetWithAI({
-      context: strategyContext,
-      ai: ai,
-    }).pipe(
-      Effect.annotateLogs({
-        strategy: 'cloudflare-ai',
-        model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-        availableTargets: strategyContext.availableTargets.length,
-        opponentHits: strategyContext.opponentHits.length,
-        opponentMisses: strategyContext.opponentMisses.length,
-      })
-    );
-  });
-
-// Get target coordinate using AI or fallback strategy
-const getTargetCoordinate = (strategyContext: StrategyContext, ai: Ai | undefined) => {
-  return Effect.gen(function* () {
-    if (strategyContext.availableTargets.length === 0) {
-      yield* Effect.log('💡 No targets available, using fallback strategy', LogLevel.Info);
-      return yield* getFallbackTarget(strategyContext).pipe(
-        Effect.annotateLogs({
-          strategy: 'fallback',
-          reason: 'no_targets',
-          availableTargets: 0,
-        })
-      );
-    }
-
-    // Check if AI binding is available
-    if (!ai) {
-      yield* Effect.log('💡 No AI binding available, using fallback strategy', LogLevel.Info);
-      return yield* getFallbackTarget(strategyContext).pipe(
-        Effect.annotateLogs({
-          strategy: 'fallback',
-          reason: 'no_ai_binding',
-          availableTargets: strategyContext.availableTargets.length,
-        })
-      );
-    }
-
-    yield* Effect.log('🌐 Using Cloudflare AI strategy for target selection', LogLevel.Info);
-    return yield* Effect.catchAll(getAiTarget(ai, strategyContext), () => {
-      return Effect.gen(function* () {
-        yield* Effect.log(
-          '⚠️ Cloudflare AI strategy failed, falling back to random strategy',
-          LogLevel.Warning
-        );
-        return yield* getFallbackTarget(strategyContext).pipe(
-          Effect.annotateLogs({
-            strategy: 'fallback',
-            reason: 'cloudflare_ai_failed',
-            availableTargets: strategyContext.availableTargets.length,
-          })
-        );
-      });
-    });
-  });
-};
-
-const agentTurn = (
-  store: ReturnType<typeof createStoreDoPromise> extends Promise<infer T> ? T : never,
+/**
+ * Run agent turn using the refactored agent package.
+ * This creates the appropriate adapters for Cloudflare Workers environment.
+ */
+const runAgentTurn = (
+  store: LiveStoreInstance,
   currentGame: { id: string; currentTurn: number },
   myPlayer: string,
   opponentPlayer: string,
   semaphore: TSemaphore.TSemaphore,
   ai: Ai | undefined
-): Effect.Effect<void, unknown, never> => {
-  return Effect.gen(function* () {
-    const gameId = currentGame.id;
+) => {
+  const storeAdapter = new CloudflareStoreAdapter(store);
+  const aiProvider = ai ? new CloudflareAgentAIProvider(ai) : undefined;
 
-    // Get all missiles fired in this game to avoid duplicates
-    const allFiredMissiles =
-      ((store as any).query(allMissiles$(gameId)) as Array<{ x: number; y: number }>) || [];
-    const firedCoordinates = new Set<string>(
-      allFiredMissiles.map((missile) => `${missile.x},${missile.y}`)
-    );
-
-    // Log agent turn start
-    yield* Effect.log(
-      `🤖 Agent turn for player: ${myPlayer}, turn: ${currentGame.currentTurn}`,
-      LogLevel.Info
-    );
-    yield* Effect.log(`Already fired at: ${firedCoordinates.size} locations`, LogLevel.Debug);
-
-    // Build available targets list
-    const availableTargets = buildAvailableTargets(firedCoordinates, GAME_CONFIG);
-
-    // Get opponent missile results
-    const opponentMissileResults =
-      ((store as any).query(missileResults$(gameId, opponentPlayer)) as Array<{
-        id: string;
-        x: number;
-        y: number;
-        player: string;
-        isHit: boolean;
-      }>) || [];
-
-    // Build strategy context for AI analysis
-    const strategyContext = buildStrategyContext(opponentMissileResults, availableTargets);
-
-    // Log game state analysis
-    yield* Effect.log('🧠 AI analyzing game state', LogLevel.Info);
-    yield* Effect.log('Game state details', LogLevel.Debug, {
-      opponentHits: strategyContext.opponentHits.length,
-      opponentMisses: strategyContext.opponentMisses.length,
-      availableTargets: strategyContext.availableTargets.length,
-    });
-
-    // Get target coordinate using Cloudflare AI or fallback strategy
-    const coordinate = yield* getTargetCoordinate(strategyContext, ai).pipe(
-      Effect.withLogSpan('strategy_selection'),
-      Effect.annotateLogs({
-        gameId: gameId,
-        player: myPlayer,
-        opponentPlayer: opponentPlayer,
-        gridSize: `${strategyContext.gridSize.rowSize}x${strategyContext.gridSize.colSize}`,
-      }),
-      Effect.provide(Logger.pretty)
-    );
-
-    if (!coordinate) {
-      yield* Effect.log('🤖 No available cells to fire at', LogLevel.Warning);
-      return;
-    }
-
-    yield* Effect.log(
-      `🎯 Strategy selected target: (${coordinate.x}, ${coordinate.y})`,
-      LogLevel.Info
-    );
-
-    // Create missile
-    const missileId = crypto.randomUUID();
-    const missile = {
-      id: missileId,
-      gameId: gameId,
-      player: myPlayer,
-      x: coordinate.x,
-      y: coordinate.y,
-      createdAt: new Date(),
-    };
-
-    // Add a small delay to ensure the missile is processed before we check results
-    yield* Effect.sleep(100);
-
-    // Fire the missile first
-    (store as any).commit(events.MissileFired(missile));
-
-    // Process the missile using the same semaphore used for player actions
-    yield* processMissileWithSemaphore(
-      store,
-      missile,
-      gameId,
-      myPlayer,
-      opponentPlayer,
-      semaphore
-    );
-
-    // Log turn completion
-    yield* Effect.log('🤖 AI Agent turn completed', LogLevel.Info);
-  }).pipe(
-    Effect.catchAll((error) =>
-      Effect.log('🚨 Agent turn failed completely', LogLevel.Error, error)
-    ),
-    Effect.provide(Logger.pretty)
-  );
+  return agentTurn({
+    store: storeAdapter,
+    currentGame: {
+      id: currentGame.id,
+      currentTurn: currentGame.currentTurn,
+      currentPlayer: myPlayer,
+      players: [myPlayer, opponentPlayer],
+    },
+    myPlayer,
+    opponentPlayer,
+    semaphore,
+    aiProvider,
+  });
 };
 
 const main = async (context: DurableObjectState, env: Env) => {
@@ -309,9 +102,7 @@ const main = async (context: DurableObjectState, env: Env) => {
     clientId: 'server-client',
     sessionId: 'server-client-session',
     durableObject: {
-      ctx: context as unknown as Parameters<
-        typeof createStoreDoPromise
-      >[0]['durableObject']['ctx'],
+      ctx: context as unknown as Parameters<typeof createStoreDoPromise>[0]['durableObject']['ctx'],
       env: env,
       bindingName: 'SERVER_CLIENT_DO',
     },
@@ -328,21 +119,24 @@ const main = async (context: DurableObjectState, env: Env) => {
 
   // Log server start with Effect
   await Effect.runPromise(
-    Effect.log(`Server started - Sync URL: ${LIVESTORE_SYNC_URL}, Port: ${PORT}`, LogLevel.Info).pipe(
-      Effect.provide(Logger.pretty)
-    )
+    Effect.log(
+      `Server started - Sync URL: ${LIVESTORE_SYNC_URL}, Port: ${PORT}`,
+      LogLevel.Info
+    ).pipe(Effect.provide(Logger.pretty))
   );
 
   (store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }).subscribe(
     currentGame$(),
     {
       skipInitialRun: false,
-      onUpdate: async (currentGame: {
-        id: string;
-        players: string[];
-        currentPlayer: string;
-        currentTurn: number;
-      } | null) => {
+      onUpdate: async (
+        currentGame: {
+          id: string;
+          players: string[];
+          currentPlayer: string;
+          currentTurn: number;
+        } | null
+      ) => {
         await Effect.runPromise(
           Effect.gen(function* () {
             yield* Effect.log(`Server Store Id: ${store.storeId}`, LogLevel.Debug);
@@ -380,10 +174,7 @@ const main = async (context: DurableObjectState, env: Env) => {
         );
 
         // Helper function to create missile subscription for a player
-        const createMissileSubscription = (
-          currentPlayer: string,
-          opponent: string
-        ) => {
+        const createMissileSubscription = (currentPlayer: string, opponent: string) => {
           return (
             store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }
           ).subscribe(missiles$(currentGameId, currentPlayer), {
@@ -428,10 +219,20 @@ const main = async (context: DurableObjectState, env: Env) => {
                 ).pipe(Effect.provide(Logger.pretty))
               );
 
-              console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y, lastMissile.player);
+              console.log(
+                'missile',
+                lastMissile.id,
+                missiles?.[0]?.x,
+                missiles?.[0]?.y,
+                lastMissile.player
+              );
 
               if (!freshGame || lastMissile.player !== freshGame.currentPlayer) {
-                console.log('missile fired out of turn', lastMissile.player, freshGame?.currentPlayer);
+                console.log(
+                  'missile fired out of turn',
+                  lastMissile.player,
+                  freshGame?.currentPlayer
+                );
                 return;
               }
 
@@ -449,7 +250,7 @@ const main = async (context: DurableObjectState, env: Env) => {
               // Process missile with semaphore to prevent race conditions
               await Effect.runPromise(
                 (
-                  processMissileWithSemaphore(
+                  processMissileWithStore(
                     store,
                     lastMissile,
                     currentGameId,
@@ -484,7 +285,10 @@ const main = async (context: DurableObjectState, env: Env) => {
 
             await Effect.runPromise(
               Effect.gen(function* () {
-                yield* Effect.log(`Next player: ${game?.currentPlayer}, Agent is: ${agentPlayer}`, LogLevel.Info);
+                yield* Effect.log(
+                  `Next player: ${game?.currentPlayer}, Agent is: ${agentPlayer}`,
+                  LogLevel.Info
+                );
               }).pipe(Effect.provide(Logger.pretty))
             );
 
@@ -492,7 +296,7 @@ const main = async (context: DurableObjectState, env: Env) => {
               // Run agent turn asynchronously without blocking
               await Effect.runPromise(
                 (
-                  agentTurn(
+                  runAgentTurn(
                     store,
                     { id: game.id, currentTurn: game.currentTurn },
                     agentPlayer,
@@ -512,7 +316,11 @@ const main = async (context: DurableObjectState, env: Env) => {
           },
         });
 
-        unsubscribeHandlers.push(unsubscribeMissilesPlayer1, unsubscribeMissilesPlayer2, unsubscribeLastAction);
+        unsubscribeHandlers.push(
+          unsubscribeMissilesPlayer1,
+          unsubscribeMissilesPlayer2,
+          unsubscribeLastAction
+        );
       },
     }
   );

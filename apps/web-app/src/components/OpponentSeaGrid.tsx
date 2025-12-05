@@ -3,10 +3,16 @@ import { currentGame$, missileResults$, opponentShips$ } from '@battleship/schem
 import { useClientDocument, useQuery, useStore } from '@livestore/react';
 import { useCallback, useMemo } from 'react';
 import { events, GamePhase, tables } from '../schema/schema';
+import type { GameService } from '../util/gameService';
 import { useGameState } from './GameStateProvider';
 import { SeaGrid } from './SeaGrid';
 
-export const OpponentSeaGrid = ({ player }: { player: string }) => {
+interface OpponentSeaGridProps {
+  player: string;
+  gameService?: GameService;
+}
+
+export const OpponentSeaGrid = ({ player, gameService }: OpponentSeaGridProps) => {
   const { store } = useStore();
 
   const { currentGameId } = useGameState();
@@ -46,9 +52,30 @@ export const OpponentSeaGrid = ({ player }: { player: string }) => {
             createdAt: new Date(),
           })
         );
+
+        // In browser AI mode, process the user's missile locally to update the turn
+        const aiType = currentGame?.aiPlayerType;
+        if (aiType === 'browserai' && gameService && currentGameId) {
+          gameService.processUserMissile({
+            missileId,
+            currentGameId,
+            myPlayer,
+            opponent,
+            x,
+            y,
+          });
+        }
       }
     },
-    [store, currentGameId, myPlayer, missileResults]
+    [
+      store,
+      currentGameId,
+      myPlayer,
+      opponent,
+      missileResults,
+      currentGame?.aiPlayerType,
+      gameService,
+    ]
   );
 
   const isMyTurn = currentGame?.currentPlayer === myPlayer;
