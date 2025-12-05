@@ -369,96 +369,108 @@ const main = async (context: DurableObjectState, env: Env) => {
 
         const currentGameId = currentGame.id;
         const players = currentGame.players;
-        const myPlayer = players[0]; // Assuming first player is the current player
-        const opponentPlayer = players[1];
+        const player1 = players[0];
+        const player2 = players[1];
 
         await Effect.runPromise(
           Effect.log(
-            `Start listening to missiles - Game: ${currentGameId}, Player: ${myPlayer}, Opponent: ${opponentPlayer}`,
+            `Start listening to missiles - Game: ${currentGameId}, Player1: ${player1}, Player2: ${player2}`,
             LogLevel.Info
           ).pipe(Effect.provide(Logger.pretty))
         );
 
-        // Listen to MissileFired events for all players
-        const unsubscribeMissiles = (
-          store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }
-        ).subscribe(missiles$(currentGameId, myPlayer), {
-          skipInitialRun: false,
+        // Helper function to create missile subscription for a player
+        const createMissileSubscription = (
+          currentPlayer: string,
+          opponent: string
+        ) => {
+          return (
+            store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }
+          ).subscribe(missiles$(currentGameId, currentPlayer), {
+            skipInitialRun: false,
 
-          onSubscribe: async () => {
-            await Effect.runPromise(
-              Effect.log('Subscribed to missiles', LogLevel.Debug).pipe(
-                Effect.provide(Logger.pretty)
-              )
-            );
-          },
-          onUpdate: async (
-            missiles: Array<{ id: string; x: number; y: number; player: string }>
-          ) => {
-            // Get fresh game state to check current player
-            const freshGame = (store as any).query(currentGame$()) as {
-              id: string;
-              currentPlayer: string;
-            } | null;
+            onSubscribe: async () => {
+              await Effect.runPromise(
+                Effect.log(`Subscribed to missiles for ${currentPlayer}`, LogLevel.Debug).pipe(
+                  Effect.provide(Logger.pretty)
+                )
+              );
+            },
+            onUpdate: async (
+              missiles: Array<{ id: string; x: number; y: number; player: string }>
+            ) => {
+              // Get fresh game state to check current player
+              const freshGame = (store as any).query(currentGame$()) as {
+                id: string;
+                currentPlayer: string;
+              } | null;
 
-            await Effect.runPromise(
-              Effect.gen(function* () {
-                yield* Effect.log(
-                  `🚀 Missiles fired: ${missiles.length}, myPlayer: ${myPlayer}`,
-                  LogLevel.Info
-                );
-                yield* Effect.log('Current game state', LogLevel.Debug, freshGame);
-              }).pipe(Effect.provide(Logger.pretty))
-            );
+              await Effect.runPromise(
+                Effect.gen(function* () {
+                  yield* Effect.log(
+                    `🚀 Missiles fired by ${currentPlayer}: ${missiles.length}`,
+                    LogLevel.Info
+                  );
+                  yield* Effect.log('Current game state', LogLevel.Debug, freshGame);
+                }).pipe(Effect.provide(Logger.pretty))
+              );
 
-            if (missiles.length <= 0) {
-              return;
-            }
+              if (missiles.length <= 0) {
+                return;
+              }
 
-            const lastMissile = missiles?.[0];
+              const lastMissile = missiles?.[0];
 
-            await Effect.runPromise(
-              Effect.log(
-                `Missile details - ID: ${lastMissile.id}, Position: (${missiles?.[0]?.x}, ${missiles?.[0]?.y})`,
-                LogLevel.Debug
-              ).pipe(Effect.provide(Logger.pretty))
-            );
+              await Effect.runPromise(
+                Effect.log(
+                  `Missile details - ID: ${lastMissile.id}, Position: (${missiles?.[0]?.x}, ${missiles?.[0]?.y}), Player: ${lastMissile.player}`,
+                  LogLevel.Debug
+                ).pipe(Effect.provide(Logger.pretty))
+              );
 
-            console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y);
+              console.log('missile', lastMissile.id, missiles?.[0]?.x, missiles?.[0]?.y, lastMissile.player);
 
-            if (!freshGame || lastMissile.player !== freshGame.currentPlayer) {
-              console.log('missile fired out of turn', lastMissile.player, freshGame?.currentPlayer);
-              return;
-            }
+              if (!freshGame || lastMissile.player !== freshGame.currentPlayer) {
+                console.log('missile fired out of turn', lastMissile.player, freshGame?.currentPlayer);
+                return;
+              }
 
-            // Check if missile result already exists
-            const missileResult = (store as any).query(
-              missileResultsById$(currentGameId, lastMissile.id)
-            ) as unknown[];
+              // Check if missile result already exists
+              const missileResult = (store as any).query(
+                missileResultsById$(currentGameId, lastMissile.id)
+              ) as unknown[];
 
-            console.log('missile result', missileResult);
+              console.log('missile result', missileResult);
 
-            if (missileResult?.length > 0) {
-              return;
-            }
+              if (missileResult?.length > 0) {
+                return;
+              }
 
-            // Process missile with semaphore to prevent race conditions
-            await Effect.runPromise(
-              (
-                processMissileWithSemaphore(
-                  store,
-                  lastMissile,
-                  currentGameId,
-                  myPlayer,
-                  opponentPlayer,
-                  missileProcessingSemaphore
-                ) as Effect.Effect<void, unknown, never>
-              ).pipe(Effect.provide(Logger.pretty))
-            );
-          },
-        });
+              // Process missile with semaphore to prevent race conditions
+              await Effect.runPromise(
+                (
+                  processMissileWithSemaphore(
+                    store,
+                    lastMissile,
+                    currentGameId,
+                    currentPlayer,
+                    opponent,
+                    missileProcessingSemaphore
+                  ) as Effect.Effect<void, unknown, never>
+                ).pipe(Effect.provide(Logger.pretty))
+              );
+            },
+          });
+        };
 
-        // Could live in another client
+        // Subscribe to missiles from both players
+        const unsubscribeMissilesPlayer1 = createMissileSubscription(player1, player2);
+        const unsubscribeMissilesPlayer2 = createMissileSubscription(player2, player1);
+
+        // Could live in another client - AI agent is always player2
+        const agentPlayer = player2;
+        const humanPlayer = player1;
+
         const unsubscribeLastAction = (
           store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }
         ).subscribe(lastAction$(currentGameId), {
@@ -472,19 +484,19 @@ const main = async (context: DurableObjectState, env: Env) => {
 
             await Effect.runPromise(
               Effect.gen(function* () {
-                yield* Effect.log(`Next player: ${game?.currentPlayer}`, LogLevel.Info);
+                yield* Effect.log(`Next player: ${game?.currentPlayer}, Agent is: ${agentPlayer}`, LogLevel.Info);
               }).pipe(Effect.provide(Logger.pretty))
             );
 
-            if (game?.currentPlayer === 'player-2') {
+            if (game?.currentPlayer === agentPlayer) {
               // Run agent turn asynchronously without blocking
               await Effect.runPromise(
                 (
                   agentTurn(
                     store,
                     { id: game.id, currentTurn: game.currentTurn },
-                    'player-2',
-                    'player-1',
+                    agentPlayer,
+                    humanPlayer,
                     missileProcessingSemaphore,
                     env.AI
                   ) as Effect.Effect<void, unknown, never>
@@ -500,7 +512,7 @@ const main = async (context: DurableObjectState, env: Env) => {
           },
         });
 
-        unsubscribeHandlers.push(unsubscribeMissiles, unsubscribeLastAction);
+        unsubscribeHandlers.push(unsubscribeMissilesPlayer1, unsubscribeMissilesPlayer2, unsubscribeLastAction);
       },
     }
   );

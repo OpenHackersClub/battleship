@@ -7,6 +7,22 @@
   // Secrets configuration
   "secrets_store_secrets": [],
 
+  // Static assets from web-app build
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  // Custom domain route (commented out due to existing DNS record)
+  // To re-enable: delete the existing A/CNAME record for battleship.openhackers.club in Cloudflare DNS first
+  // "routes": [
+  //   {
+  //     "pattern": "battleship.openhackers.club",
+  //     "custom_domain": true
+  //   }
+  // ],
+  "workers_dev": true,
+
   "dev":{
     "port": 8787
   },

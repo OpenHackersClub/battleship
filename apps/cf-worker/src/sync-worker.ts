@@ -1,5 +1,5 @@
 import { makeDurableObject, makeWorker } from '@livestore/sync-cf/cf-worker';
-import type { ExecutionContext } from '@cloudflare/workers-types';
+import type { ExecutionContext, Fetcher } from '@cloudflare/workers-types';
 
 // Re-export ServerClientDO from dedicated file
 export { ServerClientDO } from './server-client-do';
@@ -17,6 +17,7 @@ export class WebSocketServer extends makeDurableObject({
 interface Env {
   SERVER_CLIENT_DO: DurableObjectNamespace;
   WEBSOCKET_SERVER: DurableObjectNamespace;
+  ASSETS: Fetcher;
 }
 
 const syncWorker = makeWorker({
@@ -41,6 +42,19 @@ const syncWorker = makeWorker({
   enableCORS: true,
 });
 
+// Check if request is for sync/WebSocket (has storeId or is WebSocket upgrade)
+const isSyncRequest = (request: Request, url: URL): boolean => {
+  // WebSocket upgrade requests for sync
+  if (request.headers.get('Upgrade') === 'websocket') {
+    return true;
+  }
+  // Sync API requests have storeId parameter
+  if (url.searchParams.has('storeId')) {
+    return true;
+  }
+  return false;
+};
+
 // Export default worker handler that initializes ServerClientDO and handles sync
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -53,9 +67,9 @@ export default {
       return stub.fetch(request);
     }
 
-    // Initialize ServerClientDO on first sync request to ensure agent is running
-    if (url.searchParams.has('storeId')) {
-      // Trigger agent initialization in the background
+    // Handle sync/WebSocket requests
+    if (isSyncRequest(request, url)) {
+      // Initialize ServerClientDO on first sync request to ensure agent is running
       const storeId = url.searchParams.get('storeId');
       if (storeId) {
         const id = env.SERVER_CLIENT_DO.idFromName('singleton');
@@ -63,9 +77,23 @@ export default {
         // Fire and forget - don't await
         ctx.waitUntil(stub.fetch(new Request('https://dummy/init')));
       }
+      // Handle sync requests
+      return syncWorker.fetch(request, env, ctx);
     }
 
-    // Handle sync requests
-    return syncWorker.fetch(request, env, ctx);
+    // Serve static assets for all other requests (SPA)
+    // Try to serve the requested file, fallback to index.html for SPA routing
+    try {
+      const response = await env.ASSETS.fetch(request);
+      if (response.status === 404) {
+        // SPA fallback: serve index.html for client-side routing
+        const indexRequest = new Request(new URL('/', request.url).toString(), request);
+        return env.ASSETS.fetch(indexRequest);
+      }
+      return response;
+    } catch {
+      // If assets fetch fails, return a basic 404
+      return new Response('Not Found', { status: 404 });
+    }
   },
 };

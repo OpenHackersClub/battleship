@@ -102,16 +102,21 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
         <div className="grid gap-2">
           {aiOptions.map((option) => {
             const isDisabled = disabled || (option.isAvailable === false && !option.isDownloadable);
+            const isSelected = value === option.value;
+            const isUnselectedAndDisabled = disabled && !isSelected;
             return (
             <label
               key={option.value}
               className={`
-                relative flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors
+                relative flex items-center space-x-3 p-3 border rounded-lg transition-colors
                 ${option.isAvailable === false && !option.isDownloadable ? 'opacity-50 cursor-not-allowed' : ''}
-                ${value === option.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
-                ${disabled ? 'cursor-not-allowed opacity-75' : ''}
+                ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
+                ${isUnselectedAndDisabled ? 'cursor-not-allowed opacity-40 grayscale' : ''}
+                ${disabled && isSelected ? 'cursor-default' : ''}
+                ${!disabled && !isDisabled ? 'cursor-pointer' : ''}
               `}
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 if (!isDisabled) {
                   onChange(option.value);
                 }
