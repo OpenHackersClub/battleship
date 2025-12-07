@@ -4,14 +4,7 @@ import { makeDurableObject, makeWorker } from '@livestore/sync-cf/cf-worker';
 // Re-export ServerClientDO from dedicated file
 export { ServerClientDO } from './server-client-do';
 
-export class WebSocketServer extends makeDurableObject({
-  onPush: async (message) => {
-    console.log('onPush', message.batch);
-  },
-  onPull: async (message) => {
-    console.log('onPull', message);
-  },
-}) {}
+export class WebSocketServer extends makeDurableObject({}) {}
 
 // Environment type definition
 interface Env {
@@ -22,8 +15,6 @@ interface Env {
 
 const syncWorker = makeWorker({
   validatePayload: (payload: unknown) => {
-    console.log('payload ', payload);
-
     // Handle null, undefined, or empty payload
     if (!payload) {
       throw new Error('Missing payload');
@@ -42,17 +33,10 @@ const syncWorker = makeWorker({
   enableCORS: true,
 });
 
-// Check if request is for sync/WebSocket (has storeId or is WebSocket upgrade)
-const isSyncRequest = (request: Request, url: URL): boolean => {
-  // WebSocket upgrade requests for sync
-  if (request.headers.get('Upgrade') === 'websocket') {
-    return true;
-  }
-  // Sync API requests have storeId parameter
-  if (url.searchParams.has('storeId')) {
-    return true;
-  }
-  return false;
+// Check if request is for sync/WebSocket (path starts with /sync)
+const isSyncRequest = (url: URL): boolean => {
+  // Sync requests must be on /sync path
+  return url.pathname === '/sync' || url.pathname.startsWith('/sync/');
 };
 
 // Export default worker handler that initializes ServerClientDO and handles sync
@@ -68,14 +52,16 @@ export default {
     }
 
     // Handle sync/WebSocket requests
-    if (isSyncRequest(request, url)) {
+    if (isSyncRequest(url)) {
       // Initialize ServerClientDO on first sync request to ensure agent is running
       const storeId = url.searchParams.get('storeId');
+      console.log('[sync-worker] Sync request received, storeId:', storeId);
       if (storeId) {
+        console.log('[sync-worker] Triggering ServerClientDO initialization...');
         const id = env.SERVER_CLIENT_DO.idFromName('singleton');
         const stub = env.SERVER_CLIENT_DO.get(id);
-        // Fire and forget - don't await
-        ctx.waitUntil(stub.fetch(new Request('https://dummy/init')));
+        // Fire and forget - don't await, pass storeId in query params
+        ctx.waitUntil(stub.fetch(new Request(`https://dummy/init?storeId=${encodeURIComponent(storeId)}`)));
       }
       // Handle sync requests
       return syncWorker.fetch(request, env, ctx);

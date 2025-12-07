@@ -5,8 +5,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "wrangler -c ./wrangler.jsonc dev ",
-    "build": "vite build",
+    "dev": "env-cmd -f ../../.env wrangler -c ./wrangler.jsonc dev ",
+    "build": "env-cmd -f ../../.env vite build",
     "test": "vitest",
     "preview": "npm run build && vite preview",
     "deploy": "wrangler -c wrangler.jsonc deploy",
@@ -24,6 +24,7 @@
     "hono": "^4.9.2"
   },
   "devDependencies": {
+    "env-cmd": "^10.1.0",
     "@biomejs/biome": "^2.2.0",
     "@cloudflare/containers": "^0.0.19",
     "@cloudflare/workers-types": "^4.20250620.0",

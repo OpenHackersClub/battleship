@@ -6,28 +6,17 @@ import {
   missileResultsById$,
   missiles$,
 } from '@battleship/schema/queries';
-import type { Ai, DurableObjectState } from '@cloudflare/workers-types';
-import { createStoreDoPromise } from '@livestore/adapter-cloudflare';
-import { Effect, Logger, LogLevel, TSemaphore } from 'effect';
+import type { Ai } from '@cloudflare/workers-types';
+import { DurableObject } from 'cloudflare:workers';
+import { createStoreDoPromise, type ClientDoWithRpcCallback } from '@livestore/adapter-cloudflare';
+import { handleSyncUpdateRpc } from '@livestore/sync-cf/client';
+import { Effect, TSemaphore } from 'effect';
 import { CloudflareAgentAIProvider } from './cloudflare-ai-provider';
 import { CloudflareStoreAdapter } from './store-adapter-cloudflare';
 
-// Environment configuration
-const ENV = {
-  LIVESTORE_SYNC_URL:
-    (globalThis as unknown as { process?: { env?: { VITE_LIVESTORE_SYNC_URL?: string } } })?.process
-      ?.env?.VITE_LIVESTORE_SYNC_URL || 'ws://localhost:8787',
-  PORT:
-    Number(
-      (globalThis as unknown as { process?: { env?: { VITE_SERVER_PORT?: string } } })?.process?.env
-        ?.VITE_SERVER_PORT
-    ) || 10000,
-  STORE_ID: (globalThis as unknown as { process?: { env?: { VITE_STORE_ID?: string } } })?.process
-    ?.env?.VITE_STORE_ID,
-};
-
-const LIVESTORE_SYNC_URL = ENV.LIVESTORE_SYNC_URL;
-const PORT = ENV.PORT;
+// Default configuration
+const DEFAULT_SYNC_URL = 'ws://localhost:10000/sync';
+const DEFAULT_PORT = 10000;
 
 // Helper type for Livestore instance
 type LiveStoreInstance = ReturnType<typeof createStoreDoPromise> extends Promise<infer T>
@@ -87,14 +76,22 @@ const runAgentTurn = (
   });
 };
 
-const main = async (context: DurableObjectState, env: Env) => {
-  const storeId = ENV.STORE_ID;
-  if (!storeId) {
-    throw new Error(
-      'VITE_STORE_ID is not set in env variables. Configure same store id across all clients'
-    );
+const main = async (context: DurableObjectState, env: Env, storeId: string) => {
+  console.log('[ServerClientDO] main() started');
+  console.log('[ServerClientDO] storeId:', storeId);
+
+  // Check if WEBSOCKET_SERVER binding exists
+  if (!env.WEBSOCKET_SERVER) {
+    console.error('[ServerClientDO] ERROR: WEBSOCKET_SERVER binding is not defined!');
+    throw new Error('WEBSOCKET_SERVER binding is required');
   }
 
+  const syncBackendId = env.WEBSOCKET_SERVER.idFromName(storeId);
+  console.log('[ServerClientDO] Sync backend DO ID:', syncBackendId.toString());
+  const syncBackendStub = env.WEBSOCKET_SERVER.get(syncBackendId);
+  console.log('[ServerClientDO] Got sync backend stub');
+
+  console.log('[ServerClientDO] Creating store...');
   // Create store using Durable Object adapter
   const store = await createStoreDoPromise({
     schema,
@@ -106,10 +103,21 @@ const main = async (context: DurableObjectState, env: Env) => {
       env: env,
       bindingName: 'SERVER_CLIENT_DO',
     },
-    syncBackendStub: env.WEBSOCKET_SERVER?.get(env.WEBSOCKET_SERVER.idFromName(storeId)),
+    syncBackendStub,
+    livePull: true, // Enable live updates via DO RPC callbacks
   } as Parameters<typeof createStoreDoPromise>[0]);
+  console.log('[ServerClientDO] Store created successfully');
+  console.log('[ServerClientDO] Store internals:', Object.keys(store));
 
-  await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
+  // Remove the arbitrary 5-second delay - subscriptions should be set up immediately
+  console.log('[ServerClientDO] Setting up subscriptions...');
+
+  // Debug: Set up a simple interval to check for changes
+  setInterval(() => {
+    const game = (store as any).query(currentGame$());
+    const missiles = game ? (store as any).query(missiles$(game.id, 'player-1')) : [];
+    console.log(`[ServerClientDO] Polling check - Game turn: ${game?.currentTurn}, Player1 missiles: ${missiles?.length || 0}`);
+  }, 5000);
 
   let lastGameId = '';
   let unsubscribeHandlers: (() => void)[] = [];
@@ -117,212 +125,146 @@ const main = async (context: DurableObjectState, env: Env) => {
   // Create a semaphore (1 permit) for missile processing to prevent race conditions
   const missileProcessingSemaphore = await Effect.runPromise(TSemaphore.make(1));
 
-  // Log server start with Effect
-  await Effect.runPromise(
-    Effect.log(
-      `Server started - Sync URL: ${LIVESTORE_SYNC_URL}, Port: ${PORT}`,
-      LogLevel.Info
-    ).pipe(Effect.provide(Logger.pretty))
-  );
+  console.log(`[ServerClientDO] Server started - Sync URL: ${DEFAULT_SYNC_URL}, Port: ${DEFAULT_PORT}`);
 
-  (store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }).subscribe(
+  // Debug: Query current game directly before subscribing
+  const initialGame = (store as any).query(currentGame$());
+  console.log('[ServerClientDO] Initial game query result:', JSON.stringify(initialGame));
+
+  // Subscribe to current game - callback is the second argument, options is the third
+  const unsubscribeCurrentGame = (store as any).subscribe(
     currentGame$(),
-    {
-      skipInitialRun: false,
-      onUpdate: async (
-        currentGame: {
-          id: string;
-          players: string[];
-          currentPlayer: string;
-          currentTurn: number;
-        } | null
-      ) => {
-        await Effect.runPromise(
-          Effect.gen(function* () {
-            yield* Effect.log(`Server Store Id: ${store.storeId}`, LogLevel.Debug);
-            yield* Effect.log('Current game updated', LogLevel.Debug, currentGame);
-          }).pipe(Effect.provide(Logger.pretty))
-        );
+    async (currentGame: {
+      id: string;
+      players: string[];
+      currentPlayer: string;
+      currentTurn: number;
+    } | null) => {
+      console.log('[ServerClientDO] onUpdate called with:', JSON.stringify(currentGame));
+      console.log(`[ServerClientDO] Server Store Id: ${store.storeId}`);
+      console.log(`[ServerClientDO] Current game updated: ${JSON.stringify(currentGame)}`);
 
-        if (!currentGame) {
-          return;
-        }
-        // onUpdate trigger on player update thus infinite loop
-        if (lastGameId === currentGame.id) {
-          return;
-        }
+      if (!currentGame) {
+        return;
+      }
+      // onUpdate trigger on player update thus infinite loop
+      if (lastGameId === currentGame.id) {
+        return;
+      }
 
-        await Effect.runPromise(
-          Effect.log('Unsubscribing listeners', LogLevel.Debug).pipe(Effect.provide(Logger.pretty))
-        );
-        for (const unsubscribe of unsubscribeHandlers) {
-          unsubscribe?.();
-        }
-        unsubscribeHandlers = [];
-        lastGameId = currentGame.id;
+      console.log('[ServerClientDO] Unsubscribing listeners');
+      for (const unsubscribe of unsubscribeHandlers) {
+        unsubscribe?.();
+      }
+      unsubscribeHandlers = [];
+      lastGameId = currentGame.id;
 
-        const currentGameId = currentGame.id;
-        const players = currentGame.players;
-        const player1 = players[0];
-        const player2 = players[1];
+      const currentGameId = currentGame.id;
+      const players = currentGame.players;
+      const player1 = players[0];
+      const player2 = players[1];
 
-        await Effect.runPromise(
-          Effect.log(
-            `Start listening to missiles - Game: ${currentGameId}, Player1: ${player1}, Player2: ${player2}`,
-            LogLevel.Info
-          ).pipe(Effect.provide(Logger.pretty))
-        );
+      console.log(`[ServerClientDO] Start listening to missiles - Game: ${currentGameId}, Player1: ${player1}, Player2: ${player2}`);
 
-        // Helper function to create missile subscription for a player
-        const createMissileSubscription = (currentPlayer: string, opponent: string) => {
-          return (
-            store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }
-          ).subscribe(missiles$(currentGameId, currentPlayer), {
-            skipInitialRun: false,
-
-            onSubscribe: async () => {
-              await Effect.runPromise(
-                Effect.log(`Subscribed to missiles for ${currentPlayer}`, LogLevel.Debug).pipe(
-                  Effect.provide(Logger.pretty)
-                )
-              );
-            },
-            onUpdate: async (
-              missiles: Array<{ id: string; x: number; y: number; player: string }>
-            ) => {
-              // Get fresh game state to check current player
-              const freshGame = (store as any).query(currentGame$()) as {
-                id: string;
-                currentPlayer: string;
-              } | null;
-
-              await Effect.runPromise(
-                Effect.gen(function* () {
-                  yield* Effect.log(
-                    `🚀 Missiles fired by ${currentPlayer}: ${missiles.length}`,
-                    LogLevel.Info
-                  );
-                  yield* Effect.log('Current game state', LogLevel.Debug, freshGame);
-                }).pipe(Effect.provide(Logger.pretty))
-              );
-
-              if (missiles.length <= 0) {
-                return;
-              }
-
-              const lastMissile = missiles?.[0];
-
-              await Effect.runPromise(
-                Effect.log(
-                  `Missile details - ID: ${lastMissile.id}, Position: (${missiles?.[0]?.x}, ${missiles?.[0]?.y}), Player: ${lastMissile.player}`,
-                  LogLevel.Debug
-                ).pipe(Effect.provide(Logger.pretty))
-              );
-
-              console.log(
-                'missile',
-                lastMissile.id,
-                missiles?.[0]?.x,
-                missiles?.[0]?.y,
-                lastMissile.player
-              );
-
-              if (!freshGame || lastMissile.player !== freshGame.currentPlayer) {
-                console.log(
-                  'missile fired out of turn',
-                  lastMissile.player,
-                  freshGame?.currentPlayer
-                );
-                return;
-              }
-
-              // Check if missile result already exists
-              const missileResult = (store as any).query(
-                missileResultsById$(currentGameId, lastMissile.id)
-              ) as unknown[];
-
-              console.log('missile result', missileResult);
-
-              if (missileResult?.length > 0) {
-                return;
-              }
-
-              // Process missile with semaphore to prevent race conditions
-              await Effect.runPromise(
-                (
-                  processMissileWithStore(
-                    store,
-                    lastMissile,
-                    currentGameId,
-                    currentPlayer,
-                    opponent,
-                    missileProcessingSemaphore
-                  ) as Effect.Effect<void, unknown, never>
-                ).pipe(Effect.provide(Logger.pretty))
-              );
-            },
-          });
-        };
-
-        // Subscribe to missiles from both players
-        const unsubscribeMissilesPlayer1 = createMissileSubscription(player1, player2);
-        const unsubscribeMissilesPlayer2 = createMissileSubscription(player2, player1);
-
-        // Could live in another client - AI agent is always player2
-        const agentPlayer = player2;
-        const humanPlayer = player1;
-
-        const unsubscribeLastAction = (
-          store as unknown as { subscribe: (query: unknown, options: unknown) => () => void }
-        ).subscribe(lastAction$(currentGameId), {
-          onUpdate: async () => {
-            // Get fresh game state to check current player and turn
-            const game = (store as any).query(currentGame$()) as {
+      // Helper function to create missile subscription for a player
+      const createMissileSubscription = (currentPlayer: string, opponent: string) => {
+        return (store as any).subscribe(
+          missiles$(currentGameId, currentPlayer),
+          async (missiles: Array<{ id: string; x: number; y: number; player: string }>) => {
+            // Get fresh game state to check current player
+            const freshGame = (store as any).query(currentGame$()) as {
               id: string;
               currentPlayer: string;
-              currentTurn: number;
             } | null;
 
-            await Effect.runPromise(
-              Effect.gen(function* () {
-                yield* Effect.log(
-                  `Next player: ${game?.currentPlayer}, Agent is: ${agentPlayer}`,
-                  LogLevel.Info
-                );
-              }).pipe(Effect.provide(Logger.pretty))
-            );
+            console.log(`[ServerClientDO] 🚀 Missiles fired by ${currentPlayer}: ${missiles.length}`);
 
-            if (game?.currentPlayer === agentPlayer) {
-              // Run agent turn asynchronously without blocking
-              await Effect.runPromise(
-                (
-                  runAgentTurn(
-                    store,
-                    { id: game.id, currentTurn: game.currentTurn },
-                    agentPlayer,
-                    humanPlayer,
-                    missileProcessingSemaphore,
-                    env.AI
-                  ) as Effect.Effect<void, unknown, never>
-                ).pipe(Effect.provide(Logger.pretty))
-              ).catch(async (error) => {
-                await Effect.runPromise(
-                  Effect.log('Agent turn failed', LogLevel.Error, error).pipe(
-                    Effect.provide(Logger.pretty)
-                  )
-                );
-              });
+            if (missiles.length <= 0) {
+              return;
             }
-          },
-        });
 
-        unsubscribeHandlers.push(
-          unsubscribeMissilesPlayer1,
-          unsubscribeMissilesPlayer2,
-          unsubscribeLastAction
+            const lastMissile = missiles?.[0];
+
+            console.log(`[ServerClientDO] Missile details - ID: ${lastMissile.id}, Position: (${lastMissile.x}, ${lastMissile.y}), Player: ${lastMissile.player}`);
+
+            if (!freshGame || lastMissile.player !== freshGame.currentPlayer) {
+              return;
+            }
+
+            // Check if missile result already exists
+            const missileResult = (store as any).query(
+              missileResultsById$(currentGameId, lastMissile.id)
+            ) as unknown[];
+
+            if (missileResult?.length > 0) {
+              return;
+            }
+
+            // Process missile with semaphore to prevent race conditions
+            console.log(`[ServerClientDO] Processing missile ${lastMissile.id}...`);
+            await Effect.runPromise(
+              processMissileWithStore(
+                store,
+                lastMissile,
+                currentGameId,
+                currentPlayer,
+                opponent,
+                missileProcessingSemaphore
+              ) as Effect.Effect<void, unknown, never>
+            );
+            console.log(`[ServerClientDO] Missile ${lastMissile.id} processed`);
+          },
+          { skipInitialRun: false }
         );
-      },
-    }
+      };
+
+      // Subscribe to missiles from both players
+      const unsubscribeMissilesPlayer1 = createMissileSubscription(player1, player2);
+      const unsubscribeMissilesPlayer2 = createMissileSubscription(player2, player1);
+
+      // Could live in another client - AI agent is always player2
+      const agentPlayer = player2;
+      const humanPlayer = player1;
+
+      const unsubscribeLastAction = (store as any).subscribe(
+        lastAction$(currentGameId),
+        async () => {
+          // Get fresh game state to check current player and turn
+          const game = (store as any).query(currentGame$()) as {
+            id: string;
+            currentPlayer: string;
+            currentTurn: number;
+          } | null;
+
+          console.log(`[ServerClientDO] Next player: ${game?.currentPlayer}, Agent is: ${agentPlayer}`);
+
+          if (game?.currentPlayer === agentPlayer) {
+            // Run agent turn asynchronously without blocking
+            console.log(`[ServerClientDO] Running agent turn...`);
+            await Effect.runPromise(
+              runAgentTurn(
+                store,
+                { id: game.id, currentTurn: game.currentTurn },
+                agentPlayer,
+                humanPlayer,
+                missileProcessingSemaphore,
+                env.AI
+              ) as Effect.Effect<void, unknown, never>
+            ).catch((error) => {
+              console.error('[ServerClientDO] Agent turn failed:', error);
+            });
+            console.log(`[ServerClientDO] Agent turn complete`);
+          }
+        }
+      );
+
+      unsubscribeHandlers.push(
+        unsubscribeMissilesPlayer1,
+        unsubscribeMissilesPlayer2,
+        unsubscribeLastAction
+      );
+    },
+    { skipInitialRun: false }
   );
 };
 
@@ -335,24 +277,52 @@ interface Env {
 }
 
 // Durable Object class for server-client
-export class ServerClientDO {
-  constructor(
-    private state: DurableObjectState,
-    private env: Env
-  ) {}
+// Extends DurableObject to enable RPC calls between DOs
+// Implements ClientDoWithRpcCallback to receive live sync updates via DO RPC
+export class ServerClientDO extends DurableObject<Env> implements ClientDoWithRpcCallback {
+  // Required brand for type checking (never actually used at runtime)
+  declare __DURABLE_OBJECT_BRAND: never;
 
-  async fetch(_request: Request): Promise<Response> {
-    // Initialize on first request
-    if (!this.initialized) {
-      await this.initialize();
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const storeId = url.searchParams.get('storeId');
+
+    // Initialize on first request with a valid storeId
+    if (!this.initialized && storeId) {
+      await this.initialize(storeId);
     }
     return new Response('Server Client DO', { status: 200 });
   }
 
+  /**
+   * RPC callback method called by the sync backend (WebSocketServer DO) to push updates.
+   * This is how livePull: true works - the sync backend calls this method on this DO
+   * whenever there are new events to sync.
+   */
+  async syncUpdateRpc(payload: unknown): Promise<void> {
+    console.log('[ServerClientDO] Received sync update via RPC callback');
+    try {
+      await handleSyncUpdateRpc(payload);
+      console.log('[ServerClientDO] Sync update processed successfully');
+    } catch (error) {
+      console.error('[ServerClientDO] Error processing sync update:', error);
+      // Don't rethrow - we want the sync to continue even if processing fails
+    }
+  }
+
   private initialized = false;
 
-  private async initialize() {
-    await main(this.state, this.env);
-    this.initialized = true;
+  private async initialize(storeId: string) {
+    console.log('[ServerClientDO] Starting initialization...');
+    try {
+      // this.ctx is provided by DurableObject base class (the state)
+      // this.env is provided by DurableObject base class (the environment)
+      await main(this.ctx, this.env, storeId);
+      this.initialized = true;
+      console.log('[ServerClientDO] Initialization complete');
+    } catch (error) {
+      console.error('[ServerClientDO] Initialization failed:', error);
+      throw error;
+    }
   }
 }

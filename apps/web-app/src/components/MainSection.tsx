@@ -1,4 +1,4 @@
-import { areAllShipsSunk, getShipPositions } from '@battleship/domain';
+import { areAllShipsSunk } from '@battleship/domain';
 import {
   allMissiles$,
   currentGame$,
@@ -23,11 +23,9 @@ import { Separator } from './ui/separator';
 
 export const PlayerTitle = ({
   playerName,
-  shipsRemaining,
   isWinner,
 }: {
   playerName: string;
-  shipsRemaining?: number;
   isWinner?: boolean;
 }) => {
   return (
@@ -46,9 +44,6 @@ export const PlayerTitle = ({
         {playerName}
         {isWinner && ' 🏆'}
       </div>
-      {shipsRemaining !== undefined && (
-        <div className="text-xs text-gray-600">🚢 {shipsRemaining} ships remaining</div>
-      )}
     </div>
   );
 };
@@ -212,61 +207,30 @@ export const MainSection: React.FC = () => {
     return () => clearTimeout(t);
   }, [currentGame, currentGameId, myPlayer, opponent, gameService]);
 
-  // Helper function to count ships alive for a player
-  const countShipsAlive = useMemo(() => {
-    if (!myShips || !opponentShips || !myMissileResults || !opponentMissileResults) {
-      return { myShipsAlive: 0, opponentShipsAlive: 0 };
-    }
-
-    const countAlive = (ships: typeof myShips, missileResults: typeof myMissileResults) => {
-      if (!ships || ships.length === 0) return 0;
-
-      const hitPositions = new Set(
-        missileResults.filter((result) => result.isHit).map((result) => `${result.x},${result.y}`)
-      );
-
-      return ships.filter((ship) => {
-        const shipPositions = getShipPositions(ship);
-        return !shipPositions.every((pos) => hitPositions.has(`${pos.x},${pos.y}`));
-      }).length;
-    };
-
-    return {
-      myShipsAlive: countAlive(myShips, opponentMissileResults || []),
-      opponentShipsAlive: countAlive(opponentShips, myMissileResults || []),
-    };
-  }, [myShips, opponentShips, myMissileResults, opponentMissileResults]);
-
   return (
     <section className="main">
       <div className="flex gap-4 justify-center items-start p-4 w-full max-w-7xl mx-auto">
         <div className="flex-1 min-w-80">
-          <PlayerTitle
-            playerName={myPlayer}
-            shipsRemaining={
-              currentGame?.gamePhase === GamePhase.Playing
-                ? countShipsAlive.myShipsAlive
-                : undefined
-            }
-            isWinner={winner === myPlayer}
-          />
+          <PlayerTitle playerName={myPlayer} isWinner={winner === myPlayer} />
           <MySeaGrid player={myPlayer} />
-          {currentGameId && <ShipDisplay ships={[...(myShips || [])]} title="My Ships" />}
+          {currentGameId && (
+            <ShipDisplay
+              ships={[...(myShips || [])]}
+              title="My Ships"
+              missileResults={opponentMissileResults || []}
+            />
+          )}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1 min-w-80">
-          <PlayerTitle
-            playerName={opponent}
-            shipsRemaining={
-              currentGame?.gamePhase === GamePhase.Playing
-                ? countShipsAlive.opponentShipsAlive
-                : undefined
-            }
-            isWinner={winner === opponent}
-          />
+          <PlayerTitle playerName={opponent} isWinner={winner === opponent} />
           <OpponentSeaGrid player={opponent} gameService={gameService} />
           {currentGameId && (
-            <ShipDisplay ships={[...(opponentShips || [])]} title={`${opponent}'s Ships`} />
+            <ShipDisplay
+              ships={[...(opponentShips || [])]}
+              title={`${opponent}'s Ships`}
+              missileResults={myMissileResults || []}
+            />
           )}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />

@@ -24,13 +24,15 @@
   "workers_dev": true,
 
   "dev":{
-    "port": 8787
+    "port": 10000,
+    "persist_to": ".wrangler/state"
   },
   // KV namespaces
   "kv_namespaces": [],
 
   // Environment variables
   "vars": {
+    "CLOUDFLARE_INCLUDE_PROCESS_ENV": true,
     "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
   },
 
