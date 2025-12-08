@@ -238,11 +238,6 @@ export const MainSection: React.FC = () => {
           <div className="mb-4">
             {!currentGame && (
               <div className="space-y-4 mb-4">
-                <AiPlayerTypeSelector
-                  value={selectedAiType}
-                  onChange={setSelectedAiType}
-                  disabled={false}
-                />
                 <Button
                   onClick={() => newGame(selectedAiType)}
                   variant="outline"
