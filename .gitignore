@@ -96,6 +96,9 @@ Thumbs.db
 .wrangler/
 worker-configuration.d.ts
 
+# CF Worker public directory (generated from web-app build)
+apps/cf-worker/public/
+
 # Package manager lock files (keep pnpm-lock.yaml in monorepo root)
 package-lock.json
 yarn.lock

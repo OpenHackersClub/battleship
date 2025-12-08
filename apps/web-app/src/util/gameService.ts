@@ -1,19 +1,10 @@
 // Avoid importing Store type; use structural typing to prevent build-time type errors
 
-import {
-  GAME_CONFIG,
-  getMissileHitPosition,
-  type MissileResult,
-  type StrategyContext,
-} from '@battleship/domain';
-import {
-  allMissiles$,
-  lastAction$,
-  missileResults$,
-  opponentShips$,
-} from '@battleship/schema/queries';
+import { agentTurn, processMissileWithSemaphore } from '@battleship/agent';
+import { Effect, Logger, TSemaphore } from 'effect';
 import { events, GamePhase } from '../schema/schema';
-import { checkBrowserAiAvailability, generateObjectWithBrowserAI } from './browser-ai-provider';
+import { BrowserAgentAIProvider } from './browser-agent-ai-provider';
+import { BrowserStoreAdapter } from './store-adapter-browser';
 
 export interface GameStartParams {
   currentGameId: string;
@@ -29,9 +20,16 @@ export interface GameStartParams {
 export class GameService {
   private store: any;
   private isAgentRunning: boolean = false;
+  private semaphore: TSemaphore.TSemaphore | null = null;
 
   constructor(store: any) {
     this.store = store;
+    // Initialize semaphore asynchronously
+    this.initSemaphore();
+  }
+
+  private async initSemaphore(): Promise<void> {
+    this.semaphore = await Effect.runPromise(TSemaphore.make(1));
   }
 
   /**
@@ -58,6 +56,7 @@ export class GameService {
 
   /**
    * Run a single Browser-AI agent turn locally in the browser.
+   * Uses the shared agentTurn function from @battleship/agent.
    * Safely no-ops if already running or if no available targets.
    */
   async runBrowserAgentTurn(params: {
@@ -67,172 +66,85 @@ export class GameService {
   }): Promise<void> {
     if (this.isAgentRunning) return;
     this.isAgentRunning = true;
+
     try {
       const { currentGameId, myPlayer, opponent } = params;
-      // Build fired set
-      const allFiredMissiles = (this.store as any).query(allMissiles$(currentGameId)) || [];
-      const firedCoordinates = new Set<string>(
-        allFiredMissiles.map((missile: any) => `${missile.x},${missile.y}`)
-      );
 
-      // Available targets
-      const availableTargets: { x: number; y: number }[] = [];
-      for (let x = 0; x < GAME_CONFIG.colSize; x++) {
-        for (let y = 0; y < GAME_CONFIG.rowSize; y++) {
-          const key = `${x},${y}`;
-          if (!firedCoordinates.has(key)) availableTargets.push({ x, y });
-        }
+      // Ensure semaphore is initialized
+      if (!this.semaphore) {
+        this.semaphore = await Effect.runPromise(TSemaphore.make(1));
       }
 
-      if (availableTargets.length === 0) return;
+      // Create adapters for browser environment
+      const storeAdapter = new BrowserStoreAdapter(this.store);
+      const aiProvider = new BrowserAgentAIProvider();
 
-      // Build strategy context
-      const opponentMissileResults =
-        (this.store as any).query(missileResults$(currentGameId, opponent)) || [];
-      const opponentHits: MissileResult[] = opponentMissileResults
-        .filter((r: any) => r.isHit)
-        .map((r: any) => ({ id: r.id, x: r.x, y: r.y, player: r.player }));
-      const opponentMisses: MissileResult[] = opponentMissileResults
-        .filter((r: any) => !r.isHit)
-        .map((r: any) => ({ id: r.id, x: r.x, y: r.y, player: r.player }));
+      // Get current game state
+      const currentGame = storeAdapter.getCurrentGame();
+      if (!currentGame) {
+        console.warn('No current game found');
+        return;
+      }
 
-      const strategyContext: StrategyContext = {
-        gridSize: { rowSize: GAME_CONFIG.rowSize, colSize: GAME_CONFIG.colSize },
-        availableTargets,
-        opponentHits,
-        opponentMisses,
-      };
-
-      // Prompt for Browser AI
-      const prompt = this.generateBattleshipPrompt(strategyContext);
-
-      // Ensure Browser AI ready
-      const availability = await checkBrowserAiAvailability();
-      if (availability !== 'available') return;
-
-      const response = await generateObjectWithBrowserAI<{
-        x: number;
-        y: number;
-        reasoning: string;
-      }>({
-        prompt,
-        temperature: 0.7,
-        topK: 3,
-      });
-
-      const selected = this.validateCoordinateOrFallback(
-        { x: response.value.x, y: response.value.y },
-        availableTargets,
-        'Browser AI'
-      );
-
-      if (!selected) return;
-
-      // Create and commit missile
-      const missileId = crypto.randomUUID();
-      const missile = {
-        id: missileId,
-        gameId: currentGameId,
-        player: myPlayer,
-        x: selected.x,
-        y: selected.y,
-        createdAt: new Date(),
-      };
-
-      // Commit fire
-      this.store.commit(events.MissileFired(missile));
-
-      // Process missile locally (determine hit/miss and next player)
-      const opponentShips =
-        (this.store as any).query(opponentShips$(currentGameId, opponent)) || [];
-      const { missileResultEvent, nextPlayer } = this.processMissile(
-        missile,
-        myPlayer,
-        opponent,
-        opponentShips
-      );
-
-      // Small delay to allow subscribers to stabilize
-      await new Promise((r) => setTimeout(r, 50));
-      this.store.commit(
-        events.ActionCompleted({
-          id: crypto.randomUUID(),
-          gameId: currentGameId,
-          player: myPlayer,
-          turn: (((this.store as any).query(lastAction$(currentGameId)) as any)?.turn ?? 0) + 1,
-          nextPlayer,
-        }) as any,
-        missileResultEvent as any
+      // Run the shared agent turn logic
+      await Effect.runPromise(
+        agentTurn({
+          store: storeAdapter,
+          currentGame: {
+            id: currentGameId,
+            currentTurn: currentGame.currentTurn,
+            currentPlayer: myPlayer,
+            players: [myPlayer, opponent],
+          },
+          myPlayer,
+          opponentPlayer: opponent,
+          semaphore: this.semaphore,
+          aiProvider,
+        }).pipe(Effect.provide(Logger.pretty))
       );
     } catch (err) {
-      console.error(err);
+      console.error('Browser agent turn failed:', err);
     } finally {
       this.isAgentRunning = false;
     }
   }
 
-  private processMissile(
-    missile: { id: string; gameId: string; player: string; x: number; y: number; createdAt: Date },
-    currentPlayer: string,
-    opponentPlayer: string,
-    opponentShips: any[]
-  ): { missileResultEvent: any; nextPlayer: string } {
-    const hitPosition = getMissileHitPosition(missile as any, opponentShips || []);
-    const isHit = hitPosition !== undefined;
+  /**
+   * Process a user's missile in browser AI mode.
+   * This determines hit/miss and commits the ActionCompleted event to update the turn.
+   * Without this, the game would get stuck waiting for server processing that doesn't exist in browser mode.
+   */
+  async processUserMissile(params: {
+    missileId: string;
+    currentGameId: string;
+    myPlayer: string;
+    opponent: string;
+    x: number;
+    y: number;
+  }): Promise<void> {
+    try {
+      const { missileId, currentGameId, myPlayer, opponent, x, y } = params;
 
-    const missileResultEvent = isHit
-      ? events.MissileHit({
-          id: missile.id,
-          gameId: missile.gameId,
-          x: missile.x,
-          y: missile.y,
-          player: currentPlayer,
-          createdAt: new Date(),
-        })
-      : events.MissileMiss({
-          id: missile.id,
-          gameId: missile.gameId,
-          x: missile.x,
-          y: missile.y,
-          player: currentPlayer,
-          createdAt: new Date(),
-        });
+      // Ensure semaphore is initialized
+      if (!this.semaphore) {
+        this.semaphore = await Effect.runPromise(TSemaphore.make(1));
+      }
 
-    const nextPlayer = isHit ? currentPlayer : opponentPlayer;
-    return { missileResultEvent, nextPlayer };
-  }
+      const storeAdapter = new BrowserStoreAdapter(this.store);
 
-  private generateBattleshipPrompt(context: StrategyContext): string {
-    return `You are an expert Battleship AI strategist. Analyze the current game state and select the optimal coordinate to maximize winning probability.
-
-GAME STATE:
-- Grid: ${context.gridSize.rowSize}x${context.gridSize.colSize}
-- Available targets: ${JSON.stringify(context.availableTargets)}
-- Opponent hits: ${JSON.stringify(context.opponentHits)}
-- Opponent misses: ${JSON.stringify(context.opponentMisses)}
-
-STRATEGIC OBJECTIVES:
-1. Use probability-based targeting for maximum ship-finding efficiency
-2. Consider ship lengths (1-3 cells) and optimal spacing patterns
-3. Target areas that maximize the probability of hitting a ship
-
-You must respond with a JSON object containing your chosen coordinate and reasoning.
-The coordinate MUST be from the available targets list.`;
-  }
-
-  private validateCoordinateOrFallback(
-    selectedCoord: { x: number; y: number },
-    availableCoords: ReadonlyArray<{ x: number; y: number }>,
-    aiType: string
-  ): { x: number; y: number } | null {
-    const isValid = globalThis.Array.from(availableCoords).some(
-      (c) => c.x === selectedCoord.x && c.y === selectedCoord.y
-    );
-    if (!isValid) {
-      console.warn(`⚠️ ${aiType} selected invalid coordinate, falling back to random selection`);
-      const randomIndex = Math.floor(Math.random() * availableCoords.length);
-      return availableCoords[randomIndex] || null;
+      // Process the missile to determine hit/miss and update turn
+      await Effect.runPromise(
+        processMissileWithSemaphore(
+          storeAdapter,
+          { id: missileId, x, y, player: myPlayer },
+          currentGameId,
+          myPlayer,
+          opponent,
+          this.semaphore
+        ).pipe(Effect.provide(Logger.pretty))
+      );
+    } catch (err) {
+      console.error('Process user missile failed:', err);
     }
-    return selectedCoord;
   }
 }

@@ -21,17 +21,29 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 
-export const PlayerTitle = ({ playerName }: { playerName: string }) => {
+export const PlayerTitle = ({
+  playerName,
+  isWinner,
+}: {
+  playerName: string;
+  isWinner?: boolean;
+}) => {
   return (
-    <div className="mt-4 flex justify-center items-center gap-3 ">
-      <Avatar>
+    <div
+      className={`mb-3 flex flex-col items-center gap-2 p-3 rounded-lg ${isWinner ? 'bg-gradient-to-r from-yellow-100 to-amber-100 animate-winner-pulse' : ''}`}
+    >
+      <Avatar className={`h-12 w-12 ${isWinner ? 'animate-winner ring-4 ring-yellow-400' : ''}`}>
         <AvatarImage
           src={`https://api.dicebear.com/8.x/identicon/svg?seed=${playerName}`}
           alt={playerName}
         />
         <AvatarFallback>{playerName.slice(0, 2)}</AvatarFallback>
       </Avatar>
-      <div className="text-sm font-medium">{playerName}</div>
+      <div className={`text-sm font-semibold ${isWinner ? 'text-amber-700 animate-winner' : ''}`}>
+        {isWinner && '🏆 '}
+        {playerName}
+        {isWinner && ' 🏆'}
+      </div>
     </div>
   );
 };
@@ -197,26 +209,28 @@ export const MainSection: React.FC = () => {
 
   return (
     <section className="main">
-      {winner && (
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-4 mb-4 rounded-lg text-center">
-          <h2 className="text-2xl font-bold">
-            🎉 Game Over! {winner === myPlayer ? 'You Win!' : `${winner} Wins!`} 🎉
-          </h2>
-          <p className="text-lg mt-2">All ships have been sunk!</p>
-        </div>
-      )}
       <div className="flex gap-4 justify-center items-start p-4 w-full max-w-7xl mx-auto">
         <div className="flex-1 min-w-80">
+          <PlayerTitle playerName={myPlayer} isWinner={winner === myPlayer} />
           <MySeaGrid player={myPlayer} />
-          <PlayerTitle playerName={myPlayer} />
-          {currentGameId && <ShipDisplay ships={[...(myShips || [])]} title="My Ships" />}
+          {currentGameId && (
+            <ShipDisplay
+              ships={[...(myShips || [])]}
+              title="My Ships"
+              missileResults={opponentMissileResults || []}
+            />
+          )}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
         <div className="flex-1 min-w-80">
-          <OpponentSeaGrid player={opponent} />
-          <PlayerTitle playerName={opponent} />
+          <PlayerTitle playerName={opponent} isWinner={winner === opponent} />
+          <OpponentSeaGrid player={opponent} gameService={gameService} />
           {currentGameId && (
-            <ShipDisplay ships={[...(opponentShips || [])]} title={`${opponent}'s Ships`} />
+            <ShipDisplay
+              ships={[...(opponentShips || [])]}
+              title={`${opponent}'s Ships`}
+              missileResults={myMissileResults || []}
+            />
           )}
         </div>
         <Separator orientation="vertical" className="h-96 w-px bg-gray-400" />
@@ -224,11 +238,6 @@ export const MainSection: React.FC = () => {
           <div className="mb-4">
             {!currentGame && (
               <div className="space-y-4 mb-4">
-                <AiPlayerTypeSelector
-                  value={selectedAiType}
-                  onChange={setSelectedAiType}
-                  disabled={false}
-                />
                 <Button
                   onClick={() => newGame(selectedAiType)}
                   variant="outline"

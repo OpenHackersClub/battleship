@@ -9,67 +9,42 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-webapp:
+  deploy-cf-worker:
     runs-on: ubuntu-latest
-    name: Deploy Webapp to Cloudflare Pages
-    
+    name: Deploy Cloudflare Worker with Web App
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.7.1
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '23'
           cache: 'pnpm'
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
       - name: Build webapp
         run: pnpm run build:webapp
         env:
           VITE_STORE_ID: ${{ vars.VITE_STORE_ID }}
           VITE_LIVESTORE_SYNC_URL: ${{ secrets.VITE_LIVESTORE_SYNC_URL }}
-      
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          workingDirectory: apps/web-app
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=battleship-webapp
 
-  deploy-cf-worker:
-    runs-on: ubuntu-latest
-    name: Deploy Cloudflare Worker
-    
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.7.1
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '23'
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
+      - name: Copy webapp build to cf-worker public directory
+        run: |
+          mkdir -p apps/cf-worker/public
+          cp -r apps/web-app/dist/* apps/cf-worker/public/
+
       - name: Build cf-worker
         run: pnpm --filter cf-worker build
-      
+
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:

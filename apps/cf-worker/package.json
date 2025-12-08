@@ -5,25 +5,32 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "wrangler -c ./wrangler.jsonc dev ",
-    "build": "vite build",
+    "dev": "env-cmd -f ../../.env wrangler -c ./wrangler.jsonc dev ",
+    "build": "env-cmd -f ../../.env vite build",
     "test": "vitest",
     "preview": "npm run build && vite preview",
     "deploy": "wrangler -c wrangler.jsonc deploy",
     "lint:fix": "biome check --fix"
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.9.0",
-    "@livestore/sync-cf": "^0.3.1",
+    "@battleship/agent": "workspace:^",
+    "@battleship/domain": "workspace:^",
+    "@battleship/schema": "workspace:^",
+    "@cloudflare/vite-plugin": "^1.13.7",
+    "@livestore/adapter-cloudflare": "0.4.0-dev.17",
+    "@livestore/livestore": "0.4.0-dev.17",
+    "@livestore/sync-cf": "0.4.0-dev.17",
+    "effect": "^3.19.6",
     "hono": "^4.9.2"
   },
   "devDependencies": {
+    "env-cmd": "^10.1.0",
     "@biomejs/biome": "^2.2.0",
     "@cloudflare/containers": "^0.0.19",
     "@cloudflare/workers-types": "^4.20250620.0",
     "typescript": "^5.8.3",
-    "vite": "^6.3.4",
+    "vite": "^7.1.7",
     "vitest": "^2.1.8",
-    "wrangler": "^4.26.0"
+    "wrangler": "^4.40.3"
   }
 }

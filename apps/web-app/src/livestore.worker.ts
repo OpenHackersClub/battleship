@@ -1,15 +1,16 @@
 import { makeWorker } from '@livestore/adapter-web/worker';
-import { makeCfSync } from '@livestore/sync-cf';
+import { makeWsSync } from '@livestore/sync-cf/client';
 import { schema } from './schema/schema';
 
-const VITE_LIVESTORE_SYNC_URL = import.meta.env.VITE_LIVESTORE_SYNC_URL || 'ws://localhost:8787';
+const VITE_LIVESTORE_SYNC_URL =
+  import.meta.env.VITE_LIVESTORE_SYNC_URL || 'ws://localhost:10000/sync';
 console.log('Livestore worker sync url', VITE_LIVESTORE_SYNC_URL);
 makeWorker({
   schema,
   sync: {
-    backend: makeCfSync({
+    backend: makeWsSync({
       url: VITE_LIVESTORE_SYNC_URL,
     }),
-    initialSyncOptions: { _tag: 'Blocking', timeout: 5000 },
+    initialSyncOptions: { _tag: 'NonBlocking' },
   },
 });

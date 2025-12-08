@@ -41,6 +41,20 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        winner: {
+          '0%, 100%': { transform: 'scale(1)', filter: 'brightness(1)' },
+          '50%': { transform: 'scale(1.1)', filter: 'brightness(1.2)' },
+        },
+        'winner-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(251, 191, 36, 0.7)' },
+          '50%': { boxShadow: '0 0 20px 10px rgba(251, 191, 36, 0.4)' },
+        },
+      },
+      animation: {
+        winner: 'winner 1s ease-in-out infinite',
+        'winner-pulse': 'winner-pulse 1.5s ease-in-out infinite',
+      },
     },
   },
   plugins: [],

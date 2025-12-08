@@ -81,8 +81,8 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
   }> = [
     {
       value: 'openai' as const,
-      label: '🌐 OpenAI',
-      description: 'GPT-4o-mini - Cloud AI (requires API key)',
+      label: '☁️ Cloudflare AI',
+      description: 'Llama 3.3 - Cloud AI powered by Cloudflare Workers AI',
       isAvailable: true,
     },
     {
@@ -100,57 +100,75 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
       <div className="space-y-2">
         <h3 className="text-sm font-medium">🤖 AI Opponent Type</h3>
         <div className="grid gap-2">
-          {aiOptions.map((option) => (
-            <label
-              key={option.value}
-              className={`
-                relative flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors
+          {aiOptions.map((option) => {
+            const isDisabled = disabled || (option.isAvailable === false && !option.isDownloadable);
+            const isSelected = value === option.value;
+            const isUnselectedAndDisabled = disabled && !isSelected;
+            return (
+              <label
+                key={option.value}
+                className={`
+                relative flex items-center space-x-3 p-3 border rounded-lg transition-colors
                 ${option.isAvailable === false && !option.isDownloadable ? 'opacity-50 cursor-not-allowed' : ''}
-                ${value === option.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
-                ${disabled ? 'cursor-not-allowed opacity-75' : ''}
+                ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
+                ${isUnselectedAndDisabled ? 'cursor-not-allowed opacity-40 grayscale' : ''}
+                ${disabled && isSelected ? 'cursor-default' : ''}
+                ${!disabled && !isDisabled ? 'cursor-pointer' : ''}
               `}
-            >
-              <input
-                type="radio"
-                name="aiPlayerType"
-                value={option.value}
-                checked={value === option.value}
-                onChange={(e) => onChange(e.target.value as AiPlayerType)}
-                disabled={disabled || (option.isAvailable === false && !option.isDownloadable)}
-                className="sr-only"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">{option.label}</span>
-                  {option.isDownloadable && (
-                    <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
-                      Download Required
-                    </span>
-                  )}
-                  {option.isDownloading && (
-                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                      Downloading...
-                    </span>
-                  )}
-                  {option.isAvailable === false &&
-                    !option.isDownloadable &&
-                    !option.isDownloading &&
-                    browserAiStatus !== null && (
-                      <span className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded">
-                        {browserAiStatus === 'unavailable' ? 'Unavailable' : 'Not Available'}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!isDisabled) {
+                    onChange(option.value);
+                  }
+                }}
+              >
+                <input
+                  type="radio"
+                  name="aiPlayerType"
+                  value={option.value}
+                  checked={value === option.value}
+                  onChange={(e) => onChange(e.target.value as AiPlayerType)}
+                  disabled={isDisabled}
+                  className="sr-only"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">{option.label}</span>
+                    {option.isDownloadable && (
+                      <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
+                        Download Required
                       </span>
                     )}
-                  {browserAiStatus === null && (
-                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                      Checking...
-                    </span>
-                  )}
+                    {option.isDownloading && (
+                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        Downloading...
+                      </span>
+                    )}
+                    {option.value === 'browserai' && option.isAvailable && (
+                      <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                        Ready
+                      </span>
+                    )}
+                    {option.isAvailable === false &&
+                      !option.isDownloadable &&
+                      !option.isDownloading &&
+                      browserAiStatus !== null && (
+                        <span className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded">
+                          {browserAiStatus === 'unavailable' ? 'Unavailable' : 'Not Available'}
+                        </span>
+                      )}
+                    {browserAiStatus === null && (
+                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                        Checking...
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">{option.description}</p>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">{option.description}</p>
-              </div>
-              {value === option.value && <div className="h-2 w-2 bg-blue-500 rounded-full" />}
-            </label>
-          ))}
+                {value === option.value && <div className="h-2 w-2 bg-blue-500 rounded-full" />}
+              </label>
+            );
+          })}
         </div>
       </div>
 
@@ -204,8 +222,8 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
               <div className="text-xs text-yellow-800">
                 <p className="font-medium">Browser AI not available</p>
                 <p className="mt-1">
-                  Requires Chrome 138+ with AI origin trial enabled. The game will use OpenAI as
-                  fallback.
+                  Requires Chrome 138+ with AI origin trial enabled. The game will use Cloudflare AI
+                  as fallback.
                 </p>
               </div>
             </div>

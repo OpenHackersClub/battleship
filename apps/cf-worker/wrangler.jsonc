@@ -7,16 +7,38 @@
   // Secrets configuration
   "secrets_store_secrets": [],
 
+  // Static assets from web-app build
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  // Custom domain route (commented out due to existing DNS record)
+  // To re-enable: delete the existing A/CNAME record for battleship.openhackers.club in Cloudflare DNS first
+  // "routes": [
+  //   {
+  //     "pattern": "battleship.openhackers.club",
+  //     "custom_domain": true
+  //   }
+  // ],
+  "workers_dev": true,
 
   "dev":{
-    "port": 8787
+    "port": 10000,
+    "persist_to": ".wrangler/state"
   },
   // KV namespaces
   "kv_namespaces": [],
 
   // Environment variables
   "vars": {
+    "CLOUDFLARE_INCLUDE_PROCESS_ENV": true,
     "LIVESTORE_CF_SYNC_DATABASE_ID": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
+  },
+
+  // AI binding for Cloudflare Workers AI
+  "ai": {
+    "binding": "AI"
   },
 
   // Durable Objects
@@ -25,17 +47,23 @@
       {
         "name": "WEBSOCKET_SERVER",
         "class_name": "WebSocketServer"
+      },
+      {
+        "name": "SERVER_CLIENT_DO",
+        "class_name": "ServerClientDO"
       }
-    ],
+    ]
   },
 
   // Migrations
   "migrations": [
     {
       "tag": "v1",
-      "new_classes":[
-       "WebSocketServer" 
-      ]
+      "new_sqlite_classes": ["WebSocketServer"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["ServerClientDO"]
     }
   ],
 
@@ -44,10 +72,10 @@
     {
       "binding": "DB",
       "database_name": "battleship",
-      "database_id": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec",
-    },
+      "database_id": "c7017400-232e-40dd-ad4a-5f84d4b6a6ec"
+    }
   ],
   "observability": {
-  "enabled": true,
-  },
+    "enabled": true
+  }
 }
