@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "vitest": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "biome check",
+    "check:fix": "biome check --fix"
   },
   "files": [
     "dist"

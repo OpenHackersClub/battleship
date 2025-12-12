@@ -1,10 +1,10 @@
-import { Effect, LogLevel, Logger, TSemaphore } from 'effect';
-import { GAME_CONFIG } from '@battleship/domain';
 import type { StrategyContext } from '@battleship/domain';
+import { GAME_CONFIG } from '@battleship/domain';
+import { Effect, Logger, LogLevel, TSemaphore } from 'effect';
+import { buildAvailableTargets, buildStrategyContext } from './context-builder';
 import { processMissile } from './missile-processor';
-import { buildStrategyContext, buildAvailableTargets } from './context-builder';
+import type { GameData, StoreAdapter } from './store-adapter';
 import { getRandomCoordinate } from './strategy';
-import type { StoreAdapter, GameData } from './store-adapter';
 import type { Coordinate } from './types';
 
 /**
@@ -246,14 +246,7 @@ export const agentTurn = (config: AgentTurnConfig): Effect.Effect<void, unknown,
     store.commitMissileFired(missile);
 
     // Process the missile using the semaphore to prevent race conditions
-    yield* processMissileWithSemaphore(
-      store,
-      missile,
-      gameId,
-      myPlayer,
-      opponentPlayer,
-      semaphore
-    );
+    yield* processMissileWithSemaphore(store, missile, gameId, myPlayer, opponentPlayer, semaphore);
 
     // Log turn completion
     yield* Effect.log('🤖 AI Agent turn completed', LogLevel.Info);

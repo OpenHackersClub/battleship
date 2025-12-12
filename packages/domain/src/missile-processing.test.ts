@@ -69,8 +69,8 @@ describe('missile processing', () => {
     it('returns true when missile hits one of multiple ships', () => {
       const missile = createMissileResult('m1', 4, 3);
       const ships = [
-        createShip('s1', 0, 0, 2, 0),  // horizontal: (0,0), (1,0)
-        createShip('s2', 3, 3, 3, 0),  // horizontal: (3,3), (4,3), (5,3)
+        createShip('s1', 0, 0, 2, 0), // horizontal: (0,0), (1,0)
+        createShip('s2', 3, 3, 3, 0), // horizontal: (3,3), (4,3), (5,3)
         createShip('s3', 1, 5, 2, 90), // vertical: (1,5), (1,6)
       ];
       const result = detectMissileHit(missile, ships);
@@ -145,7 +145,7 @@ describe('missile processing', () => {
       // it should return the first collision found
       const missile = createMissileResult('m1', 2, 1);
       const ships = [
-        createShip('s1', 0, 1, 4, 0),  // horizontal: (0,1), (1,1), (2,1), (3,1)
+        createShip('s1', 0, 1, 4, 0), // horizontal: (0,1), (1,1), (2,1), (3,1)
         createShip('s2', 2, 0, 3, 90), // vertical: (2,0), (2,1), (2,2)
       ];
       const result = getMissileHitPosition(missile, ships);
@@ -185,10 +185,10 @@ describe('missile processing', () => {
     it('treats missile as 1x1 SeaObject with horizontal orientation', () => {
       const missile = createMissileResult('m1', 3, 4);
       const ship = createShip('s1', 3, 4, 1, 0); // Same position, 1x1
-      
+
       const hitResult = detectMissileHit(missile, [ship]);
       const positionResult = getMissileHitPosition(missile, [ship]);
-      
+
       expect(hitResult).toBe(true);
       expect(positionResult).toEqual({ x: 3, y: 4 });
     });
@@ -197,7 +197,7 @@ describe('missile processing', () => {
       // The collision detection should work regardless of player ownership
       const missile = createMissileResult('m1', 1, 1, 'attacker');
       const ship = createShip('s1', 1, 1, 1, 0, 'defender');
-      
+
       const hitResult = detectMissileHit(missile, [ship]);
       expect(hitResult).toBe(true);
     });
@@ -207,7 +207,7 @@ describe('missile processing', () => {
     it('handles empty missile id', () => {
       const missile = createMissileResult('', 1, 1);
       const ship = createShip('s1', 1, 1, 1, 0);
-      
+
       const hitResult = detectMissileHit(missile, [ship]);
       expect(hitResult).toBe(true);
     });
@@ -215,7 +215,7 @@ describe('missile processing', () => {
     it('handles negative coordinates', () => {
       const missile = createMissileResult('m1', -1, -1);
       const ship = createShip('s1', -1, -1, 1, 0);
-      
+
       const hitResult = detectMissileHit(missile, [ship]);
       expect(hitResult).toBe(true);
     });
@@ -223,7 +223,7 @@ describe('missile processing', () => {
     it('handles large coordinates', () => {
       const missile = createMissileResult('m1', 100, 200);
       const ship = createShip('s1', 100, 200, 1, 0);
-      
+
       const hitResult = detectMissileHit(missile, [ship]);
       expect(hitResult).toBe(true);
     });

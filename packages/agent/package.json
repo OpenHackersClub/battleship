@@ -6,7 +6,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "biome check",
+    "check:fix": "biome check --fix"
   },
   "files": [
     "dist"

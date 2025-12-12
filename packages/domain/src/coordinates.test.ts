@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { 
-  calculateCellPosition, 
-  getCellStep, 
+import {
+  type CellPixelSize,
+  calculateCellPosition,
   calculateShipDimensions,
-  type CellPixelSize
+  getCellStep,
 } from './coordinates';
 
 describe('coordinate utilities', () => {
@@ -22,17 +22,17 @@ describe('coordinate utilities', () => {
 
     it('calculates position for cell at (1,1)', () => {
       const position = calculateCellPosition(1, 1, mockCellSize);
-      expect(position).toEqual({ 
+      expect(position).toEqual({
         left: 1 * (30 + 2), // 32
-        top: 1 * (30 + 2)   // 32
+        top: 1 * (30 + 2), // 32
       });
     });
 
     it('calculates position for cell at (3,2)', () => {
       const position = calculateCellPosition(3, 2, mockCellSize);
-      expect(position).toEqual({ 
+      expect(position).toEqual({
         left: 3 * (30 + 2), // 96
-        top: 2 * (30 + 2)   // 64
+        top: 2 * (30 + 2), // 64
       });
     });
   });
@@ -42,7 +42,7 @@ describe('coordinate utilities', () => {
       const step = getCellStep(mockCellSize);
       expect(step).toEqual({
         stepX: 32, // 30 + 2
-        stepY: 32  // 30 + 2
+        stepY: 32, // 30 + 2
       });
     });
 
@@ -56,7 +56,7 @@ describe('coordinate utilities', () => {
       const step = getCellStep(differentSize);
       expect(step).toEqual({
         stepX: 43, // 40 + 3
-        stepY: 26  // 25 + 1
+        stepY: 26, // 25 + 1
       });
     });
   });
@@ -66,16 +66,16 @@ describe('coordinate utilities', () => {
       it('calculates dimensions for length 1 horizontal ship', () => {
         const dimensions = calculateShipDimensions(1, 0, mockCellSize);
         expect(dimensions).toEqual({
-          width: 30,  // 1 * 30 + (1-1) * 2
-          height: 30
+          width: 30, // 1 * 30 + (1-1) * 2
+          height: 30,
         });
       });
 
       it('calculates dimensions for length 3 horizontal ship', () => {
         const dimensions = calculateShipDimensions(3, 0, mockCellSize);
         expect(dimensions).toEqual({
-          width: 94,  // 3 * 30 + 2 * 2 = 90 + 4
-          height: 30
+          width: 94, // 3 * 30 + 2 * 2 = 90 + 4
+          height: 30,
         });
       });
 
@@ -83,7 +83,7 @@ describe('coordinate utilities', () => {
         const dimensions = calculateShipDimensions(5, 0, mockCellSize);
         expect(dimensions).toEqual({
           width: 158, // 5 * 30 + 4 * 2 = 150 + 8
-          height: 30
+          height: 30,
         });
       });
     });
@@ -93,7 +93,7 @@ describe('coordinate utilities', () => {
         const dimensions = calculateShipDimensions(1, 90, mockCellSize);
         expect(dimensions).toEqual({
           width: 30,
-          height: 30  // 1 * 30 + (1-1) * 2
+          height: 30, // 1 * 30 + (1-1) * 2
         });
       });
 
@@ -101,7 +101,7 @@ describe('coordinate utilities', () => {
         const dimensions = calculateShipDimensions(3, 90, mockCellSize);
         expect(dimensions).toEqual({
           width: 30,
-          height: 94  // 3 * 30 + 2 * 2 = 90 + 4
+          height: 94, // 3 * 30 + 2 * 2 = 90 + 4
         });
       });
 
@@ -109,7 +109,7 @@ describe('coordinate utilities', () => {
         const dimensions = calculateShipDimensions(5, 90, mockCellSize);
         expect(dimensions).toEqual({
           width: 30,
-          height: 158 // 5 * 30 + 4 * 2 = 150 + 8
+          height: 158, // 5 * 30 + 4 * 2 = 150 + 8
         });
       });
     });
@@ -122,17 +122,17 @@ describe('coordinate utilities', () => {
           gapX: 0,
           gapY: 0,
         };
-        
+
         const horizontalDims = calculateShipDimensions(3, 0, noGapSize);
         expect(horizontalDims).toEqual({
-          width: 60,  // 3 * 20 + 2 * 0
-          height: 20
+          width: 60, // 3 * 20 + 2 * 0
+          height: 20,
         });
 
         const verticalDims = calculateShipDimensions(3, 90, noGapSize);
         expect(verticalDims).toEqual({
           width: 20,
-          height: 60  // 3 * 20 + 2 * 0
+          height: 60, // 3 * 20 + 2 * 0
         });
       });
     });

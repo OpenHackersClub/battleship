@@ -62,8 +62,8 @@
     "dev": "vite --force",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check",
-    "lint:fix": "biome check --fix",
+    "check": "biome check",
+    "check:fix": "biome check --fix",
     "test": "vitest"
   }
 }

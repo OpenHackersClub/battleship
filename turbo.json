@@ -13,17 +13,17 @@
     "test": {
       "persistent": true
     },
-    "lint": {
+    "check": {
       "dependsOn": ["^build"]
     },
-    "lint:fix": {
+    "check:fix": {
       "dependsOn": ["^build"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
     },
     "deploy": {
-      "dependsOn": ["build", "lint", "typecheck"]
+      "dependsOn": ["build", "check", "typecheck"]
     },
     "deploy:sync": {
       "dependsOn": ["build"]

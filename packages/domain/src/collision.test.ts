@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Missile, Ship } from './SeaObject';
 import { isColliding } from './collision';
+import type { Missile, Ship } from './SeaObject';
 
 describe('isColliding', () => {
   const createShip = (
