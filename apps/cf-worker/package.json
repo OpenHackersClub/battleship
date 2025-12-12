@@ -5,8 +5,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "env-cmd -f ../../.env wrangler -c ./wrangler.jsonc dev ",
-    "build": "env-cmd -f ../../.env vite build",
+    "dev": "wrangler -c ./wrangler.jsonc dev ",
+    "build": "vite build",
     "test": "vitest",
     "preview": "npm run build && vite preview",
     "deploy": "wrangler -c wrangler.jsonc deploy",
