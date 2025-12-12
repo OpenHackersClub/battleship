@@ -82,6 +82,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250620.0
         version: 4.20250816.0
+      env-cmd:
+        specifier: ^10.1.0
+        version: 10.1.0
       typescript:
         specifier: ^5.8.3
         version: 5.9.2
