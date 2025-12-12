@@ -21,6 +21,7 @@ import { events } from '../schema/schema';
  * Wraps the Livestore instance to provide a platform-agnostic interface for the agent.
  */
 export class BrowserStoreAdapter implements StoreAdapter {
+  // biome-ignore lint/suspicious/noExplicitAny: Store type avoided to prevent build-time type errors
   constructor(private store: any) {}
 
   getAllMissiles(gameId: string): MissileData[] {

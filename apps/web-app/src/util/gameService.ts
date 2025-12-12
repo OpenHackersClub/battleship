@@ -18,10 +18,12 @@ export interface GameStartParams {
 }
 
 export class GameService {
+  // biome-ignore lint/suspicious/noExplicitAny: Store type avoided to prevent build-time type errors
   private store: any;
   private isAgentRunning: boolean = false;
   private semaphore: TSemaphore.TSemaphore | null = null;
 
+  // biome-ignore lint/suspicious/noExplicitAny: Store type avoided to prevent build-time type errors
   constructor(store: any) {
     this.store = store;
     // Initialize semaphore asynchronously

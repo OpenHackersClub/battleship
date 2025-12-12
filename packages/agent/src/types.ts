@@ -1,4 +1,4 @@
-import type { StrategyContext, MissileResult, SeaObject } from '@battleship/domain';
+import type { MissileResult, SeaObject, StrategyContext } from '@battleship/domain';
 
 // Re-export domain types for convenience
 export type { StrategyContext, MissileResult, SeaObject };

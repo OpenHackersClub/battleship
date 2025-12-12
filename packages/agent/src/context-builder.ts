@@ -1,4 +1,4 @@
-import { GAME_CONFIG, type StrategyContext, type MissileResult } from '@battleship/domain';
+import { GAME_CONFIG, type MissileResult, type StrategyContext } from '@battleship/domain';
 
 interface MissileResultRow {
   id: string;

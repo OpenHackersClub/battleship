@@ -1,5 +1,5 @@
 // Re-export core types from SeaObject
-export type { SeaObject, Ship, Missile } from './SeaObject';
+export type { Missile, SeaObject, Ship } from './SeaObject';
 
 // Missile result types for game events
 export interface MissileResult {

@@ -13,7 +13,7 @@ interface MissileResult {
  */
 export const getShipPositions = (ship: Ship): Array<{ x: number; y: number }> => {
   const positions: Array<{ x: number; y: number }> = [];
-  
+
   for (let i = 0; i < ship.length; i++) {
     if (ship.orientation === 0) {
       // Horizontal ship
@@ -23,7 +23,7 @@ export const getShipPositions = (ship: Ship): Array<{ x: number; y: number }> =>
       positions.push({ x: ship.x, y: ship.y + i });
     }
   }
-  
+
   return positions;
 };
 
@@ -35,17 +35,17 @@ export const getShipPositions = (ship: Ship): Array<{ x: number; y: number }> =>
  */
 export const areAllShipsSunk = (ships: Ship[], missileResults: MissileResult[]): boolean => {
   if (ships.length === 0) return false;
-  
+
   // Get all ship positions
-  const allShipPositions = ships.flatMap(ship => getShipPositions(ship));
-  
+  const allShipPositions = ships.flatMap((ship) => getShipPositions(ship));
+
   // Get all hit positions
   const hitPositions = missileResults
-    .filter(result => result.isHit)
-    .map(result => `${result.x},${result.y}`);
-  
+    .filter((result) => result.isHit)
+    .map((result) => `${result.x},${result.y}`);
+
   const hitPositionSet = new Set(hitPositions);
-  
+
   // Check if every ship position has been hit
-  return allShipPositions.every(pos => hitPositionSet.has(`${pos.x},${pos.y}`));
+  return allShipPositions.every((pos) => hitPositionSet.has(`${pos.x},${pos.y}`));
 };

@@ -121,6 +121,14 @@ export const AiPlayerTypeSelector: React.FC<AiPlayerTypeSelectorProps> = ({
                     onChange(option.value);
                   }
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (!isDisabled) {
+                      onChange(option.value);
+                    }
+                  }
+                }}
               >
                 <input
                   type="radio"

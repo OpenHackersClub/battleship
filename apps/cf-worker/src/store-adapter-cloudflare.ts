@@ -29,31 +29,37 @@ export class CloudflareStoreAdapter implements StoreAdapter {
   constructor(private store: LiveStoreInstance) {}
 
   getAllMissiles(gameId: string): MissileData[] {
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     return ((this.store as any).query(allMissiles$(gameId)) as MissileData[]) || [];
   }
 
   getOpponentShips(gameId: string, opponentPlayer: string): SeaObject[] {
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     return ((this.store as any).query(opponentShips$(gameId, opponentPlayer)) as SeaObject[]) || [];
   }
 
   getMissileResults(gameId: string, player: string): MissileResultData[] {
     return (
+      // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
       ((this.store as any).query(missileResults$(gameId, player)) as MissileResultData[]) || []
     );
   }
 
   getMissileResultById(gameId: string, missileId: string): MissileResultData[] {
     return (
+      // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
       ((this.store as any).query(missileResultsById$(gameId, missileId)) as MissileResultData[]) ||
       []
     );
   }
 
   getLastAction(gameId: string): LastActionData | null {
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     return (this.store as any).query(lastAction$(gameId)) as LastActionData | null;
   }
 
   getCurrentGame(): GameData | null {
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     return (this.store as any).query(currentGame$()) as GameData | null;
   }
 
@@ -65,6 +71,7 @@ export class CloudflareStoreAdapter implements StoreAdapter {
     y: number;
     createdAt: Date;
   }): void {
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     (this.store as any).commit(events.MissileFired(missile));
   }
 
@@ -78,6 +85,7 @@ export class CloudflareStoreAdapter implements StoreAdapter {
     },
     missileResultEvent: unknown
   ): void {
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     (this.store as any).commit(events.ActionCompleted(actionCompleted), missileResultEvent);
   }
 }

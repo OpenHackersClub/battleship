@@ -7,10 +7,10 @@ interface LanguageModelSession {
       outputLanguage?: string;
       responseConstraint?: {
         type: string;
-        properties?: Record<string, any>;
+        properties?: Record<string, unknown>;
         required?: string[];
         additionalProperties?: boolean;
-        items?: any;
+        items?: unknown;
         maxItems?: number;
         pattern?: string;
       };
@@ -54,6 +54,7 @@ declare global {
 }
 
 export const checkBrowserAiAvailability = async (): Promise<string> => {
+  // biome-ignore lint/suspicious/noExplicitAny: Browser API access requires casting globalThis
   const LM = (globalThis as any).LanguageModel as LanguageModel | undefined;
   if (!LM) {
     throw new Error('Browser AI not available in this environment');
@@ -64,6 +65,7 @@ export const checkBrowserAiAvailability = async (): Promise<string> => {
 export const downloadBrowserAiModel = async (
   onProgress?: (progress: number) => void
 ): Promise<void> => {
+  // biome-ignore lint/suspicious/noExplicitAny: Browser API access requires casting globalThis
   const LM = (globalThis as any).LanguageModel as LanguageModel | undefined;
   if (!LM) {
     throw new Error('Browser AI not available in this environment');
@@ -84,7 +86,7 @@ export const downloadBrowserAiModel = async (
   }
 
   console.log('Starting model download...');
-  let session: any = null;
+  let session: LanguageModelSession | null = null;
   let downloadStarted = false;
 
   try {
@@ -160,6 +162,7 @@ export const generateObjectWithBrowserAI = async <A>(options: {
   temperature?: number;
   topK?: number;
 }): Promise<{ value: A }> => {
+  // biome-ignore lint/suspicious/noExplicitAny: Browser API access requires casting globalThis
   const LM = (globalThis as any).LanguageModel as LanguageModel | undefined;
   if (!LM) {
     throw new Error('Browser AI not available');

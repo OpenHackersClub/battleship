@@ -1,5 +1,6 @@
-import { agentTurn, processMissileWithSemaphore, type StoreAdapter } from '@battleship/agent';
-import { events, schema } from '@battleship/schema';
+import { DurableObject } from 'cloudflare:workers';
+import { agentTurn, processMissileWithSemaphore } from '@battleship/agent';
+import { schema } from '@battleship/schema';
 import {
   currentGame$,
   lastAction$,
@@ -7,8 +8,7 @@ import {
   missiles$,
 } from '@battleship/schema/queries';
 import type { Ai } from '@cloudflare/workers-types';
-import { DurableObject } from 'cloudflare:workers';
-import { createStoreDoPromise, type ClientDoWithRpcCallback } from '@livestore/adapter-cloudflare';
+import { type ClientDoWithRpcCallback, createStoreDoPromise } from '@livestore/adapter-cloudflare';
 import { handleSyncUpdateRpc } from '@livestore/sync-cf/client';
 import { Effect, TSemaphore } from 'effect';
 import { CloudflareAgentAIProvider } from './cloudflare-ai-provider';
@@ -114,9 +114,13 @@ const main = async (context: DurableObjectState, env: Env, storeId: string) => {
 
   // Debug: Set up a simple interval to check for changes
   setInterval(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     const game = (store as any).query(currentGame$());
+    // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
     const missiles = game ? (store as any).query(missiles$(game.id, 'player-1')) : [];
-    console.log(`[ServerClientDO] Polling check - Game turn: ${game?.currentTurn}, Player1 missiles: ${missiles?.length || 0}`);
+    console.log(
+      `[ServerClientDO] Polling check - Game turn: ${game?.currentTurn}, Player1 missiles: ${missiles?.length || 0}`
+    );
   }, 5000);
 
   let lastGameId = '';
@@ -125,21 +129,27 @@ const main = async (context: DurableObjectState, env: Env, storeId: string) => {
   // Create a semaphore (1 permit) for missile processing to prevent race conditions
   const missileProcessingSemaphore = await Effect.runPromise(TSemaphore.make(1));
 
-  console.log(`[ServerClientDO] Server started - Sync URL: ${DEFAULT_SYNC_URL}, Port: ${DEFAULT_PORT}`);
+  console.log(
+    `[ServerClientDO] Server started - Sync URL: ${DEFAULT_SYNC_URL}, Port: ${DEFAULT_PORT}`
+  );
 
   // Debug: Query current game directly before subscribing
+  // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
   const initialGame = (store as any).query(currentGame$());
   console.log('[ServerClientDO] Initial game query result:', JSON.stringify(initialGame));
 
   // Subscribe to current game - callback is the second argument, options is the third
-  const unsubscribeCurrentGame = (store as any).subscribe(
+  // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
+  const _unsubscribeCurrentGame = (store as any).subscribe(
     currentGame$(),
-    async (currentGame: {
-      id: string;
-      players: string[];
-      currentPlayer: string;
-      currentTurn: number;
-    } | null) => {
+    async (
+      currentGame: {
+        id: string;
+        players: string[];
+        currentPlayer: string;
+        currentTurn: number;
+      } | null
+    ) => {
       console.log('[ServerClientDO] onUpdate called with:', JSON.stringify(currentGame));
       console.log(`[ServerClientDO] Server Store Id: ${store.storeId}`);
       console.log(`[ServerClientDO] Current game updated: ${JSON.stringify(currentGame)}`);
@@ -164,20 +174,26 @@ const main = async (context: DurableObjectState, env: Env, storeId: string) => {
       const player1 = players[0];
       const player2 = players[1];
 
-      console.log(`[ServerClientDO] Start listening to missiles - Game: ${currentGameId}, Player1: ${player1}, Player2: ${player2}`);
+      console.log(
+        `[ServerClientDO] Start listening to missiles - Game: ${currentGameId}, Player1: ${player1}, Player2: ${player2}`
+      );
 
       // Helper function to create missile subscription for a player
       const createMissileSubscription = (currentPlayer: string, opponent: string) => {
+        // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
         return (store as any).subscribe(
           missiles$(currentGameId, currentPlayer),
           async (missiles: Array<{ id: string; x: number; y: number; player: string }>) => {
             // Get fresh game state to check current player
+            // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
             const freshGame = (store as any).query(currentGame$()) as {
               id: string;
               currentPlayer: string;
             } | null;
 
-            console.log(`[ServerClientDO] 🚀 Missiles fired by ${currentPlayer}: ${missiles.length}`);
+            console.log(
+              `[ServerClientDO] 🚀 Missiles fired by ${currentPlayer}: ${missiles.length}`
+            );
 
             if (missiles.length <= 0) {
               return;
@@ -185,13 +201,16 @@ const main = async (context: DurableObjectState, env: Env, storeId: string) => {
 
             const lastMissile = missiles?.[0];
 
-            console.log(`[ServerClientDO] Missile details - ID: ${lastMissile.id}, Position: (${lastMissile.x}, ${lastMissile.y}), Player: ${lastMissile.player}`);
+            console.log(
+              `[ServerClientDO] Missile details - ID: ${lastMissile.id}, Position: (${lastMissile.x}, ${lastMissile.y}), Player: ${lastMissile.player}`
+            );
 
             if (!freshGame || lastMissile.player !== freshGame.currentPlayer) {
               return;
             }
 
             // Check if missile result already exists
+            // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
             const missileResult = (store as any).query(
               missileResultsById$(currentGameId, lastMissile.id)
             ) as unknown[];
@@ -226,17 +245,21 @@ const main = async (context: DurableObjectState, env: Env, storeId: string) => {
       const agentPlayer = player2;
       const humanPlayer = player1;
 
+      // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
       const unsubscribeLastAction = (store as any).subscribe(
         lastAction$(currentGameId),
         async () => {
           // Get fresh game state to check current player and turn
+          // biome-ignore lint/suspicious/noExplicitAny: Store type requires dynamic access
           const game = (store as any).query(currentGame$()) as {
             id: string;
             currentPlayer: string;
             currentTurn: number;
           } | null;
 
-          console.log(`[ServerClientDO] Next player: ${game?.currentPlayer}, Agent is: ${agentPlayer}`);
+          console.log(
+            `[ServerClientDO] Next player: ${game?.currentPlayer}, Agent is: ${agentPlayer}`
+          );
 
           if (game?.currentPlayer === agentPlayer) {
             // Run agent turn asynchronously without blocking
