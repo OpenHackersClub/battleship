@@ -48,12 +48,13 @@ This is a monorepo containing:
 
 - AI Agents:
   - **Cloudflare AI**: Llama 3.3 70B running on Cloudflare Workers AI
-  - **Browser AI**: Gemini Nano running locally in Chrome 138+ (requires model download)
+  - **Browser AI**: Gemini Nano running locally in Chrome 148+ (stable Prompt API w/ multimodal + JSON-schema output, 2026-05; requires model download)
   - Both AI types use strategic prompting to analyze game state and select optimal targets
 
 - Game state:
   - Current game state is unencrypted
   - TODO: encrypt opponent grid at server side
+    - Reference impl: LiveStore v0.4 DO-SQLite default + DO-RPC transport are a viable substrate for server-authoritative hidden state — see [livestore CHANGELOG](https://github.com/livestorejs/livestore/blob/dev/CHANGELOG.md)
 
 ## Deployment
 
